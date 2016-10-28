@@ -1,0 +1,109 @@
+Tasks that need to be completed before it's 100% operational:
+
+1. Get complete list of courses owned by each programme
+2. Fill in abbreviations into lists, and complete relevant parts of code (all the way to the output code at the bottom)
+3. Figure out how to get script to run non-interactively ...setwd, year, require xlsx, and other setup in this other script???
+4. Get sample files from Elspeth to test a full sample batch
+5. Consider whether to change the import type to Excel
+6. Consider whether or not to modify to allow for 'special'/unusual tuition levels
+
+		Students who have discounts on tuition fees (for any reason)
+			> Bursaries
+			> 10% discount
+			> Special situations with overseas scholarships
+
+		The easiest way to take pt2 into account would be to create new lines in the tuition .csv showing different 'versions' of the same programme (e.g. EE_ConacyctMexico)
+		and to rename the column 'Programme_Fee' in that file (so that it can be called when merging files to calculate tuition stuff)
+
+		Then, the only adjust that has to be made is in the attendance sheets/dissertation sheets. Another column would needed to be added 'Programme_Fee' to hold the different verions.
+
+		A student would then have an entry that was either the standard name or the relevant version that applies to them. This 'Programme_Fee' column would need to be referenced whenver
+		a list of student info is merged with tuition info (to ensure the correct tuition version is paired with each student). The 'normal' Programme column can be used for all other 
+		stuff in the code as it is now.
+
+____________________________________________________________
+
+***Assumptions in the code***
+1. We only invoice the university for the administration costs in the year a PT student completes their dissertation
+2. A 'straight' 5% of the full tuition fee is calculated for each student taking an SRUC course, regardless of what programme/school they are from
+3. A 'straight' 10% of the full tuition fee is calculated in association with supervision for each student, regardless of what programme/school they are from 
+4. The fraction of the tuition fee that goes to administration is 40%. Of this, SRUC gets 75% and GeoSciences 15%
+5. The only relevant schools are GeoSciences, SPSS, Law, Engineering, and Business
+6. Students from any programme within these schools may end up using SRUC resources
+7. SRUC education staff involved in supervising dissertations are counted as Crosp & Soils staff in order to distinguish them from LEES staff (as this is the big cost centre split)
+ 
+Notational Requirements within the code:
+1. The following abbreviations must be used when referring to individual programmes: EE	EPM	FS	SS	SPH
+2. The following abbreviations must be used when referring to individual courses: 
+		Foundations in Ecological Economics 	- FEE
+		ENvironmental Valuation					- EV
+		Applications in Ecological Economics	- AEE
+		Participation in Policy and Planning	- PPP
+		Environmental Impact Assessment			- EIA
+		...
+		
+***Set-up Requirements***
+1. Create a folder where the analysis will be undertaken and call it 'SRUC MOU Calculation 2016' (substituting the year as appropriate)
+2. Within this folder, create two folders: one called 'Inputs', one called 'Outputs'
+3. Look up the file path that takes you into your 'SRUC MOU Calculation 2016' folder (as you'll need this to set the working directory for R)
+4. Ensure that the R package 'xlsx' is installed in your version of R
+		
+***Inputs Required to Run the Code (each of which must be a .csv file)***
+1. A file with the tuition fee data for the all programmes in the relevant schools in the year of interest. 
+
+Total Number of files of this type: 1
+	
+	> The file name must have this format: Fees_year.csv (e.g. Fees_2016.csv)
+	> The file must use the following headers (and no other ones): Programme	School	H	O
+		> H stands for 'home fees'
+		> O stands for 'overseas fees'
+
+2.  A file for each course that is 'owned' by SRUC showing the attendance list for the year of interest. 
+
+Total Number of files of this type: 12(?)
+
+	> The file name must have this format: CourseAbbreviationyear.csv (e.g. FEE2016.csv)
+	> The file must use the following headers (and no other ones): UUN	Surname	Forename	Programme	School	Fee_Status
+		> The spellings used within the 'Programme' column must be the same as in the tuition fee file (and all other files using this data)
+		> 'Fee_Status' must be shown as either H or O (to match with the tuition fee file)
+
+3. A file for each programme that shows the supervisory arrangements for all students on that programme
+
+Total Number of files of this type: 5
+
+	> The file name must have this format: ProgrammeAbbreviation_Dissertationsyear.csv (e.g. EE_Dissertations2016.csv)
+	> The file must use the following headers (and no other ones): UUN	Surname	Forename	Programme	School	Fee_Status	Supervisor	Organisation	Detail
+		> The spellings used within the 'Programme' column must be the same as in the tuition fee file (and all other files using this data)
+		> 'Fee_Status' must be shown as either 'H' or 'O' (to match with the tuition fee file)
+		> 'Organisation' must be shown as either 'SRUC' or 'University'
+		> 'Detail' is a column used to show whether a supervisor marked 'SRUC' is actually an SRUC employee or an external
+			> Accepable entries are 'SRUC' or 'External'
+
+4. A file showing which SRUC staff are supervising non-SRUC dissertations
+
+Total Number of files of this type: 1
+
+	> The file name must have this format: SRUC_ExternalDissertationsyear.csv (e.g. SRUC_ExternalDissertations2016.csv)
+	> The file must use the following headers (and no other ones): UUN	Surname	Forename	Programme	School	Fee_Status	Supervisor	Research_Group
+		> The spellings used within the 'Programme' column must be the same as in the tuition fee file (and all other files using this data)
+		> 'Fee_Status' must be shown as either 'H' or 'O' (to match with the tuition fee file)
+		> 'Research_Group' is used to distinguish between LEES and Crops & Soils (any Education staff supervising are counted as being in Crops & Soils for this script)
+			> Acceptable entires are 'LEES' or 'CropsSoils'
+			
+Total Number of Input Files Needed: 19(?)
+
+***Running the Code / Completing the Analysis ***
+The following steps are required in order to run the code and complete the analysis:
+
+...
+
+***Outputs Generated***
+The script will generate 6 outputs: One summary file containing everything, and one file for each MSc programme. 
+These will be created within the 'Outputs' folder created in the setup step described above
+
+____________________________________________________________
+***FURTHER DOCUMENTATION***
+
+...{{FILL IN WHEN CODE AND FUNCTIONS ARE FINALISED - USE SPACE TO PROVIDE REFERENCE FOR WHAT FUNCTIONS/OBJECTS DO}}
+
+
