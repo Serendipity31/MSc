@@ -11,17 +11,21 @@
 # Step 1a: Set working directory to match the folder from Step 0, changing the code below as required, and load package xlsx
 
 setwd("C:/Users/Owner/Desktop/SRUC MOU R Test/")
+
+#at work: "G:/CKD BAULCOMB/MSc Involvement/MOU Test documents/"
 library(xlsx)
 
 # Step 1b: Initialise the following objects
 
-yr <- "2016"
-Courses <- c("FEE", "EV", "AEE", "PPP", "EIA")
-Programme_Ownership <- c("EE", "EE", "EE", "EE", "EE")
+yr <- read.xlsx("Year for Calculation.xlsx", sheetName="Sheet1", rowIndex=1, colIndex=1, header=FALSE)
+yr <- yr[1,1]
+SRUC_Courses <- read.xlsx("SRUC Courses.xlsx", sheetName="Sheet1", header=TRUE, as.data.frame=TRUE)
+Courses <- SRUC_Courses[,2]
+Programme_Ownership <- SRUC_Courses[,3]
+Credit_Weighting <- SRUC_Courses[,6]
 
 Programmes <- c("EE", "EPM", "FS", "SS", "SPH")	
 Research_Groups <- c("LEES", "CropsSoils")
-
 
 ###PART 2: Calculations related to teaching
 
@@ -30,7 +34,8 @@ Research_Groups <- c("LEES", "CropsSoils")
 	
 ImportData <- function () {
 	#Step 1: Import csv file as data frame showing all programmes, School, Home Fees (FT), Overseas Fees (FT)
-	TuitionFees <<- as.data.frame(read.csv("Inputs/Fees_2016.csv", header=TRUE, sep=","))
+	# csv version: TuitionFees <<- as.data.frame(read.csv("Inputs/Fees_2016.csv", header=TRUE, sep=","))
+	TuitionFees <<- as.data.frame(read.xlsx("Inputs/Fees_2016.xlsx", header=TRUE))
 		
 	#Step 2: Put all of the fee related information within one column (this is necessary for later)
 	TuitionFees <<- cbind(TuitionFees[gl(nrow(TuitionFees), 1, 2*nrow(TuitionFees)), 1:2], stack(TuitionFees[,3:4]))
@@ -47,18 +52,46 @@ ImportData <- function () {
 	## Imports attendance list
 	while (i <= length(Courses)) {
 		## Imports attendance list
-		fn <- paste("Inputs/", Courses[i], yr, ".csv", sep="")
+		fn <- paste("Inputs/", Courses[i], "CLASS LIST", yr, ".xlsx", sep=" ")
 		## Creates dataframe associated with course that holds position i in Courses
-		CourseData[[i]] <<-as.data.frame(read.csv(fn, header=TRUE, sep=","))
+		CourseData[[i]] <<-read.xlsx(fn, header=TRUE, as.data.frame=TRUE)
+		## removes last column (signature column)
+		CourseData[[i]] <<-(CourseData[[i]])[,-8]
+		# removes unnecessary 5th column (matriculation)
+		CourseData[[i]] <<-(CourseData[[i]])[,-5]
+		# removes the 'new' 5th column (formly 6th column on CE vs. CA)
+		CourseData[[i]] <<-(CourseData[[i]])[,-5]
+		## renames remaining columns
+		names(CourseData[[i]])[,1]<<-"UUN"
+		names(CourseData[[i]])[,2]<<-"Surname"
+		names(CourseData[[i]])[,3]<<-"Forename"
+		names(CourseData[[i]])[,4]<<-"Programme"
+		names(CourseData[[i]])[,5]<<-"School"
+		# replace school names used by default in attendance list with ones matching the fees sheet
+		# used this tip: http://stackoverflow.com/questions/22418864/r-replace-entire-strings-based-on-partial-match
+		(CourseData[[i]])[grepl("School Of Geosciences", (CourseData[[i]]), ignore.case=FALSE)] <<- "GeoSciences"
+		(CourseData[[i]])[grepl("School Of Social And Political Science", (CourseData[[i]]), ignore.case=FALSE)] <<- "Social & Political Science"
+		(CourseData[[i]])[grepl("School Of Engineering", (CourseData[[i]]), ignore.case=FALSE)] <<- "Engineering"
+		
+		#####need to do the following here:
+		# school of law doesn't show up in the attendance list, so need to find way to ID them
+		# Need to figure out what CA is before delete it
+		# Need to see how auditing students show up and then remove them from the list (as we don't get paid for them)
+		# need to see how the Business school would show up in classl ist to see if need to change school name
+		
 		## Merges attendance list with fee information
 		CourseData[[i]] <<-merge(CourseData[[i]], TuitionFees[ , c("Tuition", "Programme", "Fee_Status")], by=c("Programme", "Fee_Status"))
+		## Inputs credit weighting for course 
+		CourseData[[i]][,8]<<-(Credit_Weighting[[i]])
+		## Names this column
+		names(CourseData[[i]])[names(CourseData[[i]])=="V8"]<<-"Credit_Weighting"
 		## Re-orders attendance list with fee information so it's easier to read
-		CourseData[[i]] <<-CourseData[[i]][c("UUN", "Surname", "Forename", "Programme", "School", "Fee_Status", "Tuition")]
+		CourseData[[i]] <<-CourseData[[i]][c("UUN", "Surname", "Forename", "Programme", "School", "Fee_Status", "Tuition", "Credit_Weighting")]
 		## Calculates portion of total fee associated with each student on the course
-		CourseData[[i]][,8]<<-(0.05 * CourseData[[i]][,7])
+		CourseData[[i]][,9]<<-(0.05 * CourseData[[i]][,7] * CourseData[[i]][,8])
 		## Names this column to highlight the fee portion due to each student on the course
-		names(CourseData[[i]])[names(CourseData[[i]])=="V8"]<<-"Course_Fee"
-		
+		names(CourseData[[i]])[names(CourseData[[i]])=="V9"]<<-"Course_Fee"
+			
 		## Advances to the next course and repeats above steps until the list of courses is exhausted
 		i = i+1
 	}
