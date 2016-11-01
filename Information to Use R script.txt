@@ -1,10 +1,27 @@
 Tasks that need to be completed before it's 100% operational:
 
-1. Get complete list of courses owned by each programme
+Arrange export of CFUF and UF data from admissions (Applications > Multiview >yr > School
+> This will have to be done 10 times, put all in one master file
+> Match by student # in course list using merge command
+
+Remove last 2 characters of UUN in course lists so just student number is left
+
+Create if/else loop to perform tuition fee calculation
+> needs to see part of string, and then multiply by 0.05, 0.10, 0.15 accordingly
+
+Reorder columns before deleting them, and then delete unnecessary ones in order so column # doesn't change
+
+Ensure everything is adjusted to import from excel
+
+Ensure nothing is done by hand except renaming files appropriately
+
+Adjust and finalise documentation
+
+____________________________________________________________
 2. Fill in abbreviations into lists, and complete relevant parts of code (all the way to the output code at the bottom)
 3. Figure out how to get script to run non-interactively ...setwd, year, require xlsx, and other setup in this other script???
 4. Get sample files from Elspeth to test a full sample batch
-5. Consider whether to change the import type to Excel
+
 6. Consider whether or not to modify to allow for 'special'/unusual tuition levels
 
 		Students who have discounts on tuition fees (for any reason)
