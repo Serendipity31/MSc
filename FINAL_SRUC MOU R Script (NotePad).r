@@ -96,18 +96,28 @@ ImportData <- function () {
 		# Change any entry with RUK or SEU as the Fee Status Group to H (thus everything is O or H) 
 		(CourseData[[i]])$Fee_Status[grepl("RUK|SEU", (CourseData[[i]])$Fee_Status, ignore.case=FALSE)] <<- "H"
 		## Merges attendance list with fee information
-		######Start here
+				
+			# First  need to remove last the blank space that is found in the Fees excel sheet in the programme
+			# and school column in order to get the subsequent merge to find any matches by programme
+			TuitionFees$Programme <- as.character(TuitionFees$Programme)
+			TuitionFees$Programme <- substr(TuitionFees$Programme, 1, nchar(TuitionFees$Programme)-1)
+			TuitionFees$School <- as.character(TuitionFees$School )
+			TuitionFees$School <- substr(TuitionFees$School , 1, nchar(TuitionFees$School)-1)
+		# Then complete merger	
 		CourseData[[i]] <<-merge(CourseData[[i]], TuitionFees[ , c("Tuition", "Programme", "Fee_Status")], by=c("Programme", "Fee_Status"))
 		## Inputs credit weighting for course 
-		CourseData[[i]][,8]<<-(Credit_Weighting[[i]])
+		CourseData[[i]][,10]<<-(Credit_Weighting[[i]])
 		## Names this column
-		names(CourseData[[i]])[names(CourseData[[i]])=="V8"]<<-"Credit_Weighting"
+		names(CourseData[[i]])[names(CourseData[[i]])=="V10"]<<-"Credit_Weighting"
 		## Re-orders attendance list with fee information so it's easier to read
-		CourseData[[i]] <<-CourseData[[i]][c("UUN", "Surname", "Forename", "Programme", "School", "Fee_Status", "Tuition", "Credit_Weighting")]
+		CourseData[[i]] <<-CourseData[[i]][c("UUN", "Surname", "Forename", "Programme", "School", "Matriculation", "Enrollment", "Fee_Status", "Tuition", "Credit_Weighting")]
 		## Calculates portion of total fee associated with each student on the course
-		CourseData[[i]][,9]<<-(0.05 * CourseData[[i]][,7] * CourseData[[i]][,8])
+		
+		#### start here! Need to deal with if/then for PT student calculation
+		
+		CourseData[[i]][,11]<<-(0.05 * CourseData[[i]][,9] * CourseData[[i]][,10])
 		## Names this column to highlight the fee portion due to each student on the course
-		names(CourseData[[i]])[names(CourseData[[i]])=="V9"]<<-"Course_Fee"
+		names(CourseData[[i]])[names(CourseData[[i]])=="V11"]<<-"Course_Fee"
 			
 		## Advances to the next course and repeats above steps until the list of courses is exhausted
 		i = i+1
