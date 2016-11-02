@@ -7,15 +7,14 @@ Start at row 115 to deal with if/else statement for PT student fee calculation
 Create if/else loop to perform tuition fee calculation
 > needs to see part of string, and then multiply by 0.05, 0.10, 0.15 accordingly
 
-Reorder columns before deleting them, and then delete unnecessary ones in order so column # doesn't change
-
 Ensure everything is adjusted to import from excel
 
-Ensure nothing is done by hand except renaming files appropriately
+Ensure nothing is done by hand except renaming files appropriately (and setting up the Fee Status file since that can't be avoided)
 
-Adjust and finalise documentation
+Adjust and finalise documentation about what needs to be created, in what folders, etc.
 
 
+NOTES:
 For auditing students: Have Elspeth only add as 'class only' to Learn, and then compare 'final' class list with Learn,
 and adjust final class list just to ensure no 'class only' students have snuck onto the class list
 
@@ -36,22 +35,16 @@ ____________________________________________________________
 3. Figure out how to get script to run non-interactively ...setwd, year, require xlsx, and other setup in this other script???
 4. Get sample files from Elspeth to test a full sample batch
 
-6. Consider whether or not to modify to allow for 'special'/unusual tuition levels
-
-		Students who have discounts on tuition fees (for any reason)
-			> Bursaries
-			> 10% discount
-			> Special situations with overseas scholarships
-
-		The easiest way to take pt2 into account would be to create new lines in the tuition .csv showing different 'versions' of the same programme (e.g. EE_ConacyctMexico)
-		and to rename the column 'Programme_Fee' in that file (so that it can be called when merging files to calculate tuition stuff)
-
-		Then, the only adjust that has to be made is in the attendance sheets/dissertation sheets. Another column would needed to be added 'Programme_Fee' to hold the different verions.
-
-		A student would then have an entry that was either the standard name or the relevant version that applies to them. This 'Programme_Fee' column would need to be referenced whenver
-		a list of student info is merged with tuition info (to ensure the correct tuition version is paired with each student). The 'normal' Programme column can be used for all other 
-		stuff in the code as it is now.
-
+5. Create separate version for 2017-2018 when the study tour courses are present
+	Will need to allocate teaching to EPM
+	Will need to allocate study tour budgets to each programme based on a % split of teachings vs. trip
+		Suggest 10% teaching
+		Suggest 90% trip
+	Will need to add 10% for teaching into taught component summaries
+	Will need to create new line for 90% trip money in summary tables to show breakdown
+	Will need to create special if/else part of import function to ensure these two courses are treated appropriately
+		Suggest changing admin from 40% to 35%
+		Suggest increasing % fee from 5% to 10% for these courses
 ____________________________________________________________
 
 ***Assumptions in the code***
