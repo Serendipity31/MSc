@@ -12,14 +12,14 @@
 
 setwd("C:/Users/Owner/Desktop/SRUC MOU R Test/")
 
-#at work: "G:/CKD BAULCOMB/MSc Involvement/MOU Test documents/"
+#at work: setwd("G:/CKD BAULCOMB/MSc Involvement/MOU Test documents/")
 library(xlsx)
 
 # Step 1b: Initialise the following objects
 
-yr <- read.xlsx("Year for Calculation.xlsx", sheetName="Sheet1", rowIndex=1, colIndex=1, header=FALSE)
+yr <- read.xlsx("Inputs/ReferenceInfo/Year for Calculation.xlsx", sheetIndex=1, rowIndex=1, colIndex=1, header=FALSE)
 yr <- yr[1,1]
-SRUC_Courses <- read.xlsx("SRUC Courses.xlsx", sheetName="Sheet1", header=TRUE, as.data.frame=TRUE)
+SRUC_Courses <- read.xlsx("Inputs/ReferenceInfo/SRUC Courses.xlsx", sheetIndex=1, header=TRUE, as.data.frame=TRUE)
 Courses <- SRUC_Courses[,2]
 Programme_Ownership <- SRUC_Courses[,3]
 Credit_Weighting <- SRUC_Courses[,6]
@@ -33,19 +33,24 @@ Research_Groups <- c("LEES", "CropsSoils")
 #This function will import the fee schedule and attendance list as long as the working directory is specified
 	
 ImportData <- function () {
-	#Step 1: Import csv file as data frame showing all programmes, School, Home Fees (FT), Overseas Fees (FT)
+	# Step 1: Import csv file as data frame showing all programmes, School, Home Fees (FT), Overseas Fees (FT)
 	# csv version: TuitionFees <<- as.data.frame(read.csv("Inputs/Fees_2016.csv", header=TRUE, sep=","))
-	TuitionFees <<- as.data.frame(read.xlsx("Inputs/Fees_2016.xlsx", header=TRUE))
-	FeeStatus <<- as.data.frame(read.xlsx("Inputs/FeeStatus_2016.xlsx", header=TRUE))
-		
-	#Step 2: Put all of the fee related information within one column (this is necessary for later)
+	TuitionFees <<- read.xlsx("Inputs/ReferenceInfo/Fees_2016.xlsx", sheetIndex=1, header=TRUE, as.data.frame=TRUE)
+	# Rename column showing programme name
+	names(TuitionFees)[names(TuitionFees)=="Name.of.Programme"] <- "Programme"
+	# Step 2: Put all of the fee related information within one column (this is necessary for later)
 	TuitionFees <<- cbind(TuitionFees[gl(nrow(TuitionFees), 1, 2*nrow(TuitionFees)), 1:2], stack(TuitionFees[,3:4]))
-		
 	##Rename the columns from the defaults to what they are to allow merging later
-	names(TuitionFees)[names(TuitionFees)=="ind"] <<- "Fee_Status"
-	names(TuitionFees)[names(TuitionFees)=="values"] <<- "Tuition"
-		
-	# Step 3: Import attendance lists for all courses, merge with fee info, and calculate fee fraction for each student on each course
+	names(TuitionFees)[names(TuitionFees)=="ind"] <- "Fee_Status"
+	names(TuitionFees)[names(TuitionFees)=="values"] <- "Tuition"
+	
+	# Step 3: Import the datafile showing the fee status determined by admissions for all students in 5 schools (CFUF/UF)
+	FeeStatus <<- read.xlsx("Inputs/ReferenceInfo/FeeStatus_2016.xlsx", sheetIndex=1, header=TRUE, as.data.frame=TRUE)
+	# convert UUN column within FeeStatus to character to match with CourseData column
+	FeeStatus$UUN <- as.character(FeeStatus$UUN)
+	
+	# Step 4: Import attendance lists for all courses, merge with fee status info and fee info, 
+	# and calculate fee fraction for each student on each course
 	i = 1
 	
 	CourseData <<- vector('list', length(Courses))
@@ -53,12 +58,10 @@ ImportData <- function () {
 	## Imports attendance list
 	while (i <= length(Courses)) {
 		## Imports attendance list
-		fn <- paste("Inputs/", Courses[i], "CLASS LIST", yr, ".xlsx", sep=" ")
+		fn <- paste("Inputs/Classes/", Courses[i], "CLASS LIST", yr, ".xlsx", sep=" ")
 		## Creates dataframe associated with course that holds position i in Courses
-		CourseData[[i]] <<-read.xlsx(fn, header=TRUE, as.data.frame=TRUE)
+		CourseData[[i]] <<-read.xlsx(fn, sheetIndex=1, header=TRUE, as.data.frame=TRUE)
 		## renames columns
-		
-		### CHECK!! Are these all the columns? Are the number correct? (what about programme code)?
 		names(CourseData[[i]])[,1]<<-"UUN"
 		names(CourseData[[i]])[,2]<<-"Surname"
 		names(CourseData[[i]])[,3]<<-"Forename"
@@ -67,34 +70,33 @@ ImportData <- function () {
 		names(CourseData[[i]])[,6]<<-"Enrollment"
 		names(CourseData[[i]])[,7]<<-"School"
 		names(CourseData[[i]])[,8]<<-"Signature"
-		## removes last column (signature column)
-		CourseData[[i]] <<-(CourseData[[i]])[,-8]
+		## removes all columns after the 'School' column		
+		CourseData[[i]] <<-(CourseData[[i]])[1:7]
+		# Need to remove last 2 characters from UUN column
+		(CourseData[[i]])$UUN <<- as.character((CourseData[[i]])$UUN)
+		(CourseData[[i]])$UUN <<- substr((CourseData[[i]])$UUN, 1, nchar((CourseData[[i]])$UUN)-2)
 		# replace school names used by default in attendance list with ones matching the fees sheet
 		# used this tip: http://stackoverflow.com/questions/22418864/r-replace-entire-strings-based-on-partial-match
-		# might need to specify column and/or change it to character from factor to get to work...
-		(CourseData[[i]])[grepl("School Of Geosciences", (CourseData[[i]]), ignore.case=FALSE)] <<- "GeoSciences"
-		(CourseData[[i]])[grepl("School Of Social And Political Science", (CourseData[[i]]), ignore.case=FALSE)] <<- "Social & Political Science"
-		(CourseData[[i]])[grepl("School Of Engineering", (CourseData[[i]]), ignore.case=FALSE)] <<- "Engineering"
-		(CourseData[[i]])[grepl("School Of Law", (CourseData[[i]]), ignore.case=FALSE)] <<- "Law"
-		(CourseData[[i]])[grepl("Business School", (CourseData[[i]]), ignore.case=FALSE)] <<- "Business"
+		# Need to specify column and/or change it to character from factor to get to work...
+		(CourseData[[i]])$School <- as.character((CourseData[[i]])$School)
+		(CourseData[[i]])$School[grepl("School Of Geosciences", (CourseData[[i]])$School, ignore.case=FALSE)] <<- "GeoSciences"
+		(CourseData[[i]])$School[grepl("School Of Social And Political Science", (CourseData[[i]]), ignore.case=FALSE)] <<- "Social & Political Science"
+		(CourseData[[i]])$School[grepl("School Of Engineering", (CourseData[[i]])$School, ignore.case=FALSE)] <<- "Engineering"
+		(CourseData[[i]])$School[grepl("School Of Law", (CourseData[[i]])$School, ignore.case=FALSE)] <<- "Law"
+		(CourseData[[i]])$School[grepl("Business School", (CourseData[[i]])$School, ignore.case=FALSE)] <<- "Business"
 		# remove any rows where there is a PhD student enrolled, as they should not be enrolled
 		CourseData[[i]] <<-(CourseData[[i]])[!grepl("PhD", (CourseData[[i]])$Programme),]
-		
-		#####need to do the following here:
-		# Need to remove last 2 characters from UUN column
-		# Need to see how auditing students show up (within enrollment column as 'Audit') 
-		# and then remove them from the list (as we don't get paid for them)
-		
-		
-		# need to adjust the belowwith new columns from above, and to match TuitionFees based firstly on UUN
-		
+		# Don't have to remove auditing students at this point if prep work has done...
+		# Ready to proceed to merging files...
+			
 		## Merges attendance list with fee status information
 		CourseData[[i]] <<-merge(CourseData[[i]], FeeStatus[ , c("UUN", "FSG")], by=c("UUN"))
 		# Rename FSG column to be "Fee_Status"
-		names(CourseData[[i]])$FSG<<-"Fee_Status"
+		names(CourseData[[i]])[8]<<-"Fee_Status"
 		# Change any entry with RUK or SEU as the Fee Status Group to H (thus everything is O or H) 
-		(CourseData[[i]])[grepl("RUK"|"SEU", (CourseData[[i]])$Fee_Status, ignore.case=FALSE)] <<- "H"
+		(CourseData[[i]])$Fee_Status[grepl("RUK|SEU", (CourseData[[i]])$Fee_Status, ignore.case=FALSE)] <<- "H"
 		## Merges attendance list with fee information
+		######Start here
 		CourseData[[i]] <<-merge(CourseData[[i]], TuitionFees[ , c("Tuition", "Programme", "Fee_Status")], by=c("Programme", "Fee_Status"))
 		## Inputs credit weighting for course 
 		CourseData[[i]][,8]<<-(Credit_Weighting[[i]])
