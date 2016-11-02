@@ -36,6 +36,10 @@ ImportData <- function () {
 	# Step 1: Import csv file as data frame showing all programmes, School, Home Fees (FT), Overseas Fees (FT)
 	# csv version: TuitionFees <<- as.data.frame(read.csv("Inputs/Fees_2016.csv", header=TRUE, sep=","))
 	TuitionFees <<- read.xlsx("Inputs/ReferenceInfo/Fees_2016.xlsx", sheetIndex=1, header=TRUE, as.data.frame=TRUE)
+	#Trim trailing whitespace that appear to exist in the "Programme" columns (as this inhibits merging later)
+	## Source of this approach is: http://stackoverflow.com/questions/2261079/how-to-trim-leading-and-trailing-whitespace-in-r
+	### Look for sub-comment by Thieme Hennis Sep 19 '14 
+	TuitionFees <<- as.data.frame(apply(TuitionFees,2,function (x) sub("\\s+$", "", x)))
 	# Rename column showing programme name
 	names(TuitionFees)[names(TuitionFees)=="Name.of.Programme"] <- "Programme"
 	# Step 2: Put all of the fee related information within one column (this is necessary for later)
@@ -71,21 +75,21 @@ ImportData <- function () {
 		names(CourseData[[i]])[7]<<-"School"
 		names(CourseData[[i]])[8]<<-"Signature"
 		## removes all columns after the 'School' column		
-		CourseData[[i]] <<-(CourseData[[i]])[1:7]
+		CourseData[[i]] <<-CourseData[[i]][1:7]
 		# Need to remove last 2 characters from UUN column
-		(CourseData[[i]])$UUN <<- as.character((CourseData[[i]])$UUN)
-		(CourseData[[i]])$UUN <<- substr((CourseData[[i]])$UUN, 1, nchar((CourseData[[i]])$UUN)-2)
+		CourseData[[i]]$UUN <<- as.character(CourseData[[i]]$UUN)
+		CourseData[[i]]$UUN <<- substr(CourseData[[i]]$UUN, 1, nchar(CourseData[[i]]$UUN)-2)
 		# replace school names used by default in attendance list with ones matching the fees sheet
 		# used this tip: http://stackoverflow.com/questions/22418864/r-replace-entire-strings-based-on-partial-match
 		# Need to specify column and/or change it to character from factor to get to work...
-		(CourseData[[i]])$School <- as.character((CourseData[[i]])$School)
-		(CourseData[[i]])$School[grepl("School Of Geosciences", (CourseData[[i]])$School, ignore.case=FALSE)] <<- "GeoSciences"
-		(CourseData[[i]])$School[grepl("School Of Social And Political Science", (CourseData[[i]]), ignore.case=FALSE)] <<- "Social & Political Science"
-		(CourseData[[i]])$School[grepl("School Of Engineering", (CourseData[[i]])$School, ignore.case=FALSE)] <<- "Engineering"
-		(CourseData[[i]])$School[grepl("School Of Law", (CourseData[[i]])$School, ignore.case=FALSE)] <<- "Law"
-		(CourseData[[i]])$School[grepl("Business School", (CourseData[[i]])$School, ignore.case=FALSE)] <<- "Business"
+		CourseData[[i]]$School <- as.character(CourseData[[i]]$School)
+		CourseData[[i]]$School[grepl("School Of Geosciences", CourseData[[i]]$School, ignore.case=FALSE)] <<- "GeoSciences"
+		CourseData[[i]]$School[grepl("School Of Social And Political Science", CourseData[[i]], ignore.case=FALSE)] <<- "Social & Political Science"
+		CourseData[[i]]$School[grepl("School Of Engineering", CourseData[[i]]$School, ignore.case=FALSE)] <<- "Engineering"
+		CourseData[[i]]$School[grepl("School Of Law", CourseData[[i]]$School, ignore.case=FALSE)] <<- "Law"
+		CourseData[[i]]$School[grepl("Business School", CourseData[[i]]$School, ignore.case=FALSE)] <<- "Business"
 		# remove any rows where there is a PhD student enrolled, as they should not be enrolled
-		CourseData[[i]] <<-(CourseData[[i]])[!grepl("PhD", (CourseData[[i]])$Programme),]
+		CourseData[[i]] <<-CourseData[[i]][!grepl("PhD", CourseData[[i]]$Programme),]
 		# Don't have to remove auditing students at this point if prep work has done...
 		# Ready to proceed to merging files...
 			
@@ -94,15 +98,15 @@ ImportData <- function () {
 		# Rename FSG column to be "Fee_Status"
 		names(CourseData[[i]])[8]<<-"Fee_Status"
 		# Change any entry with RUK or SEU as the Fee Status Group to H (thus everything is O or H) 
-		(CourseData[[i]])$Fee_Status[grepl("RUK|SEU", (CourseData[[i]])$Fee_Status, ignore.case=FALSE)] <<- "H"
+		CourseData[[i]]$Fee_Status[grepl("RUK|SEU", CourseData[[i]]$Fee_Status, ignore.case=FALSE)] <<- "H"
 		## Merges attendance list with fee information
 				
 			# First  need to remove last the blank space that is found in the Fees excel sheet in the programme
 			# and school column in order to get the subsequent merge to find any matches by programme
-			TuitionFees$Programme <- as.character(TuitionFees$Programme)
-			TuitionFees$Programme <- substr(TuitionFees$Programme, 1, nchar(TuitionFees$Programme)-1)
-			TuitionFees$School <- as.character(TuitionFees$School )
-			TuitionFees$School <- substr(TuitionFees$School , 1, nchar(TuitionFees$School)-1)
+			###TuitionFees$Programme <- as.character(TuitionFees$Programme)
+			###TuitionFees$Programme <- substr(TuitionFees$Programme, 1, nchar(TuitionFees$Programme)-1)
+			###TuitionFees$School <- as.character(TuitionFees$School )
+			###TuitionFees$School <- substr(TuitionFees$School , 1, nchar(TuitionFees$School)-1)
 		# Then complete merger	
 		CourseData[[i]] <<-merge(CourseData[[i]], TuitionFees[ , c("Tuition", "Programme", "Fee_Status")], by=c("Programme", "Fee_Status"))
 		## Inputs credit weighting for course 
@@ -112,13 +116,15 @@ ImportData <- function () {
 		## Re-orders attendance list with fee information so it's easier to read
 		CourseData[[i]] <<-CourseData[[i]][c("UUN", "Surname", "Forename", "Programme", "School", "Matriculation", "Enrollment", "Fee_Status", "Tuition", "Credit_Weighting")]
 		## Calculates portion of total fee associated with each student on the course
+		## Builds the Course_Fee column based on whether a student is one of the 2 part time options
+		##  or everyone else (i.e. all the ft options). The % charged are increased to ensure the absolute 
+		## quantity paid for each course is the same as a ft student
+		CourseData[[i]]$Course_Fee <<- ifelse(grepl("3 Years", CourseData[[i]]$Programme, ignore.case=TRUE), 
+							0.15 * CourseData[[i]]$Tuition * CourseData[[i]]$Credit_Weighting, 
+						ifelse(grepl("2 Years", CourseData[[i]]$Programme, ignore.case=TRUE), 
+						       0.10 * CourseData[[i]]$Tuition * CourseData[[i]]$Credit_Weighting, 
+						       0.05 * CourseData[[i]]$Tuition * CourseData[[i]]$Credit_Weighting)
 		
-		#### start here! Need to deal with if/then for PT student calculation
-		
-		CourseData[[i]][,11]<<-(0.05 * CourseData[[i]][,9] * CourseData[[i]][,10])
-		## Names this column to highlight the fee portion due to each student on the course
-		names(CourseData[[i]])[names(CourseData[[i]])=="V11"]<<-"Course_Fee"
-			
 		## Advances to the next course and repeats above steps until the list of courses is exhausted
 		i = i+1
 	}
