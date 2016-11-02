@@ -17,6 +17,10 @@ Ensure nothing is done by hand except renaming files appropriately
 
 Adjust and finalise documentation
 
+
+For auditing students: Have Elspeth only add as 'class only' to Learn, and then compare 'final' class list with Learn,
+and adjust final class list just to ensure no 'class only' students have snuck onto the class list
+
 ____________________________________________________________
 2. Fill in abbreviations into lists, and complete relevant parts of code (all the way to the output code at the bottom)
 3. Figure out how to get script to run non-interactively ...setwd, year, require xlsx, and other setup in this other script???
