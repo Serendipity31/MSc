@@ -18,8 +18,19 @@ library(xlsx)
 # Step 1b: Initialise the following objects
 
 yr <- read.xlsx("Inputs/ReferenceInfo/Year for Calculation.xlsx", sheetIndex=1, rowIndex=1, colIndex=1, header=FALSE)
+
+#Trim trailing whitespace in case this appears
+	## Source of this approach is: http://stackoverflow.com/questions/2261079/how-to-trim-leading-and-trailing-whitespace-in-r
+	### Look for sub-comment by Thieme Hennis Sep 19 '14 
+yr <<- as.data.frame(apply(yr,2,function (x) sub("\\s+$", "", x)))
 yr <- yr[1,1]
+
 SRUC_Courses <- read.xlsx("Inputs/ReferenceInfo/SRUC Courses.xlsx", sheetIndex=1, header=TRUE, as.data.frame=TRUE)
+#Trim trailing whitespace in case this appears
+	## Source of this approach is: http://stackoverflow.com/questions/2261079/how-to-trim-leading-and-trailing-whitespace-in-r
+	### Look for sub-comment by Thieme Hennis Sep 19 '14 
+SRUC_Courses <<- as.data.frame(apply(SRUC_Courses,2,function (x) sub("\\s+$", "", x)))
+	
 Courses <- SRUC_Courses[,2]
 Programme_Ownership <- SRUC_Courses[,3]
 Credit_Weighting <- SRUC_Courses[,6]
@@ -37,8 +48,8 @@ ImportData <- function () {
 	# csv version: TuitionFees <<- as.data.frame(read.csv("Inputs/Fees_2016.csv", header=TRUE, sep=","))
 	TuitionFees <<- read.xlsx("Inputs/ReferenceInfo/Fees_2016.xlsx", sheetIndex=1, header=TRUE, as.data.frame=TRUE)
 	#Trim trailing whitespace that appear to exist in the "Programme" columns (as this inhibits merging later)
-	## Source of this approach is: http://stackoverflow.com/questions/2261079/how-to-trim-leading-and-trailing-whitespace-in-r
-	### Look for sub-comment by Thieme Hennis Sep 19 '14 
+		## Source of this approach is: http://stackoverflow.com/questions/2261079/how-to-trim-leading-and-trailing-whitespace-in-r
+		### Look for sub-comment by Thieme Hennis Sep 19 '14 
 	TuitionFees <<- as.data.frame(apply(TuitionFees,2,function (x) sub("\\s+$", "", x)))
 	# Rename column showing programme name
 	names(TuitionFees)[names(TuitionFees)=="Name.of.Programme"] <- "Programme"
@@ -50,6 +61,11 @@ ImportData <- function () {
 	
 	# Step 3: Import the datafile showing the fee status determined by admissions for all students in 5 schools (CFUF/UF)
 	FeeStatus <<- read.xlsx("Inputs/ReferenceInfo/FeeStatus_2016.xlsx", sheetIndex=1, header=TRUE, as.data.frame=TRUE)
+	#Trim trailing whitespace in case this appears
+		## Source of this approach is: http://stackoverflow.com/questions/2261079/how-to-trim-leading-and-trailing-whitespace-in-r
+		### Look for sub-comment by Thieme Hennis Sep 19 '14 
+	FeeStatus <<- as.data.frame(apply(FeeStatus,2,function (x) sub("\\s+$", "", x)))
+		
 	# convert UUN column within FeeStatus to character to match with CourseData column
 	FeeStatus$UUN <- as.character(FeeStatus$UUN)
 	
@@ -63,6 +79,10 @@ ImportData <- function () {
 	while (i <= length(Courses)) {
 		## Imports attendance list
 		fn <- paste("Inputs/Classes/", Courses[i], "CLASS LIST", yr, ".xlsx", sep=" ")
+		#Trim trailing whitespace in case this appears
+			## Source of this approach is: http://stackoverflow.com/questions/2261079/how-to-trim-leading-and-trailing-whitespace-in-r
+			### Look for sub-comment by Thieme Hennis Sep 19 '14 
+		fn <<- as.data.frame(apply(fn,2,function (x) sub("\\s+$", "", x)))
 		## Creates dataframe associated with course that holds position i in Courses
 		CourseData[[i]] <<-read.xlsx(fn, sheetIndex=1, header=TRUE, as.data.frame=TRUE)
 		## renames columns...not sure if need as [,1] or [1]...test at work was just [1] on R.3.3.2
