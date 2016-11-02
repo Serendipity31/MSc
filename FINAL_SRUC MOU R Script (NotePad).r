@@ -36,6 +36,7 @@ ImportData <- function () {
 	#Step 1: Import csv file as data frame showing all programmes, School, Home Fees (FT), Overseas Fees (FT)
 	# csv version: TuitionFees <<- as.data.frame(read.csv("Inputs/Fees_2016.csv", header=TRUE, sep=","))
 	TuitionFees <<- as.data.frame(read.xlsx("Inputs/Fees_2016.xlsx", header=TRUE))
+	FeeStatus <<- as.data.frame(read.xlsx("Inputs/FeeStatus_2016.xlsx", header=TRUE))
 		
 	#Step 2: Put all of the fee related information within one column (this is necessary for later)
 	TuitionFees <<- cbind(TuitionFees[gl(nrow(TuitionFees), 1, 2*nrow(TuitionFees)), 1:2], stack(TuitionFees[,3:4]))
@@ -55,30 +56,44 @@ ImportData <- function () {
 		fn <- paste("Inputs/", Courses[i], "CLASS LIST", yr, ".xlsx", sep=" ")
 		## Creates dataframe associated with course that holds position i in Courses
 		CourseData[[i]] <<-read.xlsx(fn, header=TRUE, as.data.frame=TRUE)
-		## removes last column (signature column)
-		CourseData[[i]] <<-(CourseData[[i]])[,-8]
-		# removes unnecessary 5th column (matriculation)
-		CourseData[[i]] <<-(CourseData[[i]])[,-5]
-		# removes the 'new' 5th column (formly 6th column on CE vs. CA)
-		CourseData[[i]] <<-(CourseData[[i]])[,-5]
-		## renames remaining columns
+		## renames columns
+		
+		### CHECK!! Are these all the columns? Are the number correct? (what about programme code)?
 		names(CourseData[[i]])[,1]<<-"UUN"
 		names(CourseData[[i]])[,2]<<-"Surname"
 		names(CourseData[[i]])[,3]<<-"Forename"
 		names(CourseData[[i]])[,4]<<-"Programme"
-		names(CourseData[[i]])[,5]<<-"School"
+		names(CourseData[[i]])[,5]<<-"Matriculation"
+		names(CourseData[[i]])[,6]<<-"Enrollment"
+		names(CourseData[[i]])[,7]<<-"School"
+		names(CourseData[[i]])[,8]<<-"Signature"
+		## removes last column (signature column)
+		CourseData[[i]] <<-(CourseData[[i]])[,-8]
 		# replace school names used by default in attendance list with ones matching the fees sheet
 		# used this tip: http://stackoverflow.com/questions/22418864/r-replace-entire-strings-based-on-partial-match
+		# might need to specify column and/or change it to character from factor to get to work...
 		(CourseData[[i]])[grepl("School Of Geosciences", (CourseData[[i]]), ignore.case=FALSE)] <<- "GeoSciences"
 		(CourseData[[i]])[grepl("School Of Social And Political Science", (CourseData[[i]]), ignore.case=FALSE)] <<- "Social & Political Science"
 		(CourseData[[i]])[grepl("School Of Engineering", (CourseData[[i]]), ignore.case=FALSE)] <<- "Engineering"
+		(CourseData[[i]])[grepl("School Of Law", (CourseData[[i]]), ignore.case=FALSE)] <<- "Law"
+		(CourseData[[i]])[grepl("Business School", (CourseData[[i]]), ignore.case=FALSE)] <<- "Business"
+		# remove any rows where there is a PhD student enrolled, as they should not be enrolled
+		CourseData[[i]] <<-(CourseData[[i]])[!grepl("PhD", (CourseData[[i]])$Programme),]
 		
 		#####need to do the following here:
-		# school of law doesn't show up in the attendance list, so need to find way to ID them
-		# Need to figure out what CA is before delete it
-		# Need to see how auditing students show up and then remove them from the list (as we don't get paid for them)
-		# need to see how the Business school would show up in classl ist to see if need to change school name
+		# Need to remove last 2 characters from UUN column
+		# Need to see how auditing students show up (within enrollment column as 'Audit') 
+		# and then remove them from the list (as we don't get paid for them)
 		
+		
+		# need to adjust the belowwith new columns from above, and to match TuitionFees based firstly on UUN
+		
+		## Merges attendance list with fee status information
+		CourseData[[i]] <<-merge(CourseData[[i]], FeeStatus[ , c("UUN", "FSG")], by=c("UUN"))
+		# Rename FSG column to be "Fee_Status"
+		names(CourseData[[i]])$FSG<<-"Fee_Status"
+		# Change any entry with RUK or SEU as the Fee Status Group to H (thus everything is O or H) 
+		(CourseData[[i]])[grepl("RUK"|"SEU", (CourseData[[i]])$Fee_Status, ignore.case=FALSE)] <<- "H"
 		## Merges attendance list with fee information
 		CourseData[[i]] <<-merge(CourseData[[i]], TuitionFees[ , c("Tuition", "Programme", "Fee_Status")], by=c("Programme", "Fee_Status"))
 		## Inputs credit weighting for course 
