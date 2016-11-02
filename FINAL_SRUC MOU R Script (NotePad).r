@@ -61,15 +61,15 @@ ImportData <- function () {
 		fn <- paste("Inputs/Classes/", Courses[i], "CLASS LIST", yr, ".xlsx", sep=" ")
 		## Creates dataframe associated with course that holds position i in Courses
 		CourseData[[i]] <<-read.xlsx(fn, sheetIndex=1, header=TRUE, as.data.frame=TRUE)
-		## renames columns
-		names(CourseData[[i]])[,1]<<-"UUN"
-		names(CourseData[[i]])[,2]<<-"Surname"
-		names(CourseData[[i]])[,3]<<-"Forename"
-		names(CourseData[[i]])[,4]<<-"Programme"
-		names(CourseData[[i]])[,5]<<-"Matriculation"
-		names(CourseData[[i]])[,6]<<-"Enrollment"
-		names(CourseData[[i]])[,7]<<-"School"
-		names(CourseData[[i]])[,8]<<-"Signature"
+		## renames columns...not sure if need as [,1] or [1]...test at work was just [1] on R.3.3.2
+		names(CourseData[[i]])[1]<<-"UUN"
+		names(CourseData[[i]])[2]<<-"Surname"
+		names(CourseData[[i]])[3]<<-"Forename"
+		names(CourseData[[i]])[4]<<-"Programme"
+		names(CourseData[[i]])[5]<<-"Matriculation"
+		names(CourseData[[i]])[6]<<-"Enrollment"
+		names(CourseData[[i]])[7]<<-"School"
+		names(CourseData[[i]])[8]<<-"Signature"
 		## removes all columns after the 'School' column		
 		CourseData[[i]] <<-(CourseData[[i]])[1:7]
 		# Need to remove last 2 characters from UUN column
