@@ -2,7 +2,7 @@ Tasks that need to be completed before it's 100% operational:
 
 Add current PT students from 2015-2016, 2014-2015 into FeeStatus sheet
 
-Start at row 99
+Start at row 115 to deal with if/else statement for PT student fee calculation
 
 Create if/else loop to perform tuition fee calculation
 > needs to see part of string, and then multiply by 0.05, 0.10, 0.15 accordingly
