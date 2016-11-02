@@ -1,10 +1,8 @@
 Tasks that need to be completed before it's 100% operational:
 
-Arrange export of CFUF and UF data from admissions (Applications > Multiview >yr > School
-> This will have to be done 10 times, put all in one master file
-> Match by student # in course list using merge command
+Add current PT students from 2015-2016, 2014-2015 into FeeStatus sheet
 
-Remove last 2 characters of UUN in course lists so just student number is left
+Start at row 99
 
 Create if/else loop to perform tuition fee calculation
 > needs to see part of string, and then multiply by 0.05, 0.10, 0.15 accordingly
@@ -20,6 +18,18 @@ Adjust and finalise documentation
 
 For auditing students: Have Elspeth only add as 'class only' to Learn, and then compare 'final' class list with Learn,
 and adjust final class list just to ensure no 'class only' students have snuck onto the class list
+
+To get fee status information, use template with correct column headers in B-O.
+> This template will need to have retained any on-going PT students from previous 2 years since 
+	> Why? They won't show up in the admissions data
+	> Just have to remember to extract them each year and put in template for next year, ready to go
+Go to Direct Admissions > View Applications
+Fill in year, school, Decision\Resposne (as either CFUF or UF), ensure the correct college is ticked, and only PG
+Copy and paste in the rows, putting cursor in column A each time (this will put UUNs in column B)
+Delete all columns to the right of I (i.e. delete starting with PD column)
+Then delete column A, so that UUN is in column A
+Then delete column G (Proc_Stat), and B (Title)
+This should leave you with UUN, Forename, Surname, FSG, Fee_Status, Decision (in columns A-H)
 
 ____________________________________________________________
 2. Fill in abbreviations into lists, and complete relevant parts of code (all the way to the output code at the bottom)
