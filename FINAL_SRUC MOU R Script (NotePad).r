@@ -16,35 +16,35 @@ setwd("C:/Users/Owner/Desktop/SRUC MOU R Test/")
 library(xlsx)
 
 # Step 1b: Initialise the following objects
-
-yr <- read.xlsx("Inputs/ReferenceInfo/Year for Calculation.xlsx", sheetIndex=1, rowIndex=1, colIndex=1, header=FALSE)
-
-#Trim trailing whitespace in case this appears
-	## Source of this approach is: http://stackoverflow.com/questions/2261079/how-to-trim-leading-and-trailing-whitespace-in-r
-	### Look for sub-comment by Thieme Hennis Sep 19 '14 
-yr <<- as.data.frame(apply(yr,2,function (x) sub("\\s+$", "", x)))
-yr <- yr[1,1]
-
-SRUC_Courses <- read.xlsx("Inputs/ReferenceInfo/SRUC Courses.xlsx", sheetIndex=1, header=TRUE, as.data.frame=TRUE)
-#Trim trailing whitespace in case this appears
-	## Source of this approach is: http://stackoverflow.com/questions/2261079/how-to-trim-leading-and-trailing-whitespace-in-r
-	### Look for sub-comment by Thieme Hennis Sep 19 '14 
-SRUC_Courses <<- as.data.frame(apply(SRUC_Courses,2,function (x) sub("\\s+$", "", x)))
-	
-Courses <- SRUC_Courses[,2]
-Programme_Ownership <- SRUC_Courses[,3]
-Credit_Weighting <- SRUC_Courses[,6]
-
 Programmes <- c("EE", "EPM", "FS", "SS", "SPH")	
 Research_Groups <- c("LEES", "CropsSoils")
+Lost_Student_Check <- data.frame(Course, Pre_Merge=numeric(), Post_Merge=numeric(), Difference=numeric(), Highlights=character(), Lost_UUNs=character(), stringsAsFactors=FALSE)
 
 ###PART 2: Calculations related to teaching
 
-# Step 1: Import data on tuition fees and students attending courses, mergin and re-arranging to see students, program details, fee status, and fees for each course
-#This function will import the fee schedule and attendance list as long as the working directory is specified
+# Step 1: Import data reference data (e.g. year, course names, tuition fee schedule, and fee status data)
+ImportReferenceData <- function() {
+	#Imports file containing year in which MSc commencses (e.g. 2016 for the 2016-2017 acadmeic year)
+	yr <<- read.xlsx("Inputs/ReferenceInfo/Year for Calculation.xlsx", sheetIndex=1, rowIndex=1, colIndex=1, header=FALSE)
+
+	#Trim trailing whitespace in case this appears
+		## Source of this approach is: http://stackoverflow.com/questions/2261079/how-to-trim-leading-and-trailing-whitespace-in-r
+		### Look for sub-comment by Thieme Hennis Sep 19 '14 
+	yr <<- as.data.frame(apply(yr,2,function (x) sub("\\s+$", "", x)))
+	yr <<- yr[1,1]
 	
-ImportData <- function () {
-	# Step 1: Import csv file as data frame showing all programmes, School, Home Fees (FT), Overseas Fees (FT)
+	# Import the data table showing all SRUC courses, programmes that own them, RGs, and credits/weightings
+	SRUC_Courses <<- read.xlsx("Inputs/ReferenceInfo/SRUC Courses.xlsx", sheetIndex=1, header=TRUE, as.data.frame=TRUE)
+	#Trim trailing whitespace in case this appears
+		## Source of this approach is: http://stackoverflow.com/questions/2261079/how-to-trim-leading-and-trailing-whitespace-in-r
+		### Look for sub-comment by Thieme Hennis Sep 19 '14 
+	SRUC_Courses <<- as.data.frame(apply(SRUC_Courses,2,function (x) sub("\\s+$", "", x)))
+	
+	Courses <<- SRUC_Courses[,2]
+	Programme_Ownership <<- SRUC_Courses[,3]
+	Credit_Weighting <<- SRUC_Courses[,6]
+	
+	# Import file as data frame showing all programmes, School, Home Fees (FT), Overseas Fees (FT)
 	# csv version: TuitionFees <<- as.data.frame(read.csv("Inputs/Fees_2016.csv", header=TRUE, sep=","))
 	TuitionFees <<- read.xlsx("Inputs/ReferenceInfo/Fees_2016.xlsx", sheetIndex=1, header=TRUE, as.data.frame=TRUE)
 	#Trim trailing whitespace that appear to exist in the "Programme" columns (as this inhibits merging later)
@@ -53,22 +53,56 @@ ImportData <- function () {
 	TuitionFees <<- as.data.frame(apply(TuitionFees,2,function (x) sub("\\s+$", "", x)))
 	# Rename column showing programme name
 	names(TuitionFees)[names(TuitionFees)=="Name.of.Programme"] <- "Programme"
-	# Step 2: Put all of the fee related information within one column (this is necessary for later)
+	# Put all of the fee related information within one column (this is necessary for later)
 	TuitionFees <<- cbind(TuitionFees[gl(nrow(TuitionFees), 1, 2*nrow(TuitionFees)), 1:2], stack(TuitionFees[,3:4]))
 	##Rename the columns from the defaults to what they are to allow merging later
 	names(TuitionFees)[names(TuitionFees)=="ind"] <- "Fee_Status"
 	names(TuitionFees)[names(TuitionFees)=="values"] <- "Tuition"
 	
-	# Step 3: Import the datafile showing the fee status determined by admissions for all students in 5 schools (CFUF/UF)
+	# Import the datafile showing the fee status determined by admissions for all students in 5 schools (CFUF/UF)
 	FeeStatus <<- read.xlsx("Inputs/ReferenceInfo/FeeStatus_2016.xlsx", sheetIndex=1, header=TRUE, as.data.frame=TRUE)
 	#Trim trailing whitespace in case this appears
 		## Source of this approach is: http://stackoverflow.com/questions/2261079/how-to-trim-leading-and-trailing-whitespace-in-r
 		### Look for sub-comment by Thieme Hennis Sep 19 '14 
 	FeeStatus <<- as.data.frame(apply(FeeStatus,2,function (x) sub("\\s+$", "", x)))
+	
+	#At this point, all the students are in the list, so need to select the subset consisting of all part time students in
+	# these schools, and export them to a file that can be used as the template for next year to ensure no one is missed out.
+	## In 2016, will have to pull in 2015 admissions data by hand, and may miss a few people on 3 year PT, but after this
+	## the only manual changes should be if someone is given an interruption of studies that we don't know about. This will
+	## be picked up by a check in the ImportData() function after it tries to merge with FeeData, so we can be prompted to
+	## see who is missing from the FeeStatus list who was enrolled in the course.
+		
+	#Generates excel file with just FS information (complete when know courses)
+FS.PGT.AnnualFinancialSummary <- function (file, FS_Admin, FS_Diss, FS_Courses, ) {
+	require(xlsx, quietly=TRUE)
+	objects <- list(FS_Admin, FS_Diss, FS_Courses, )
+	fargs <- as.list(match.call(expand.dots = TRUE))
+	objnames <- as.character(fargs)[-c(1,2)]
+	nobjects <- length(objects)
+	for (i in 1:nobjects) {
+		if (i ==1) {
+			write.xlsx(objects[[i]], file, sheetName = objnames[i])
+		}
+		else {
+			write.xlsx(objects[[i]], file, sheetName = objnames[i], append = TRUE)
+		}
+	}
+	print(paste("Workbook", file, "has", nobjects, "worksheets."))
+}
+
+FS.PGT.AnnualFinancialSummary("Outputs/FS_PGT_FinancialSummary_2016.xlsx", FS_Admin, FS_Diss, FS_Courses,)	
+		
+		
 		
 	# convert UUN column within FeeStatus to character to match with CourseData column
 	FeeStatus$UUN <- as.character(FeeStatus$UUN)
-	
+}
+
+# Step 2: Iteratively import attendance lists, rearrange them, and merge with fee status,  tuition fee, and credit information to 
+# enable the calculation of course fee owed to each programme per student on the courses (irrespective of PT status or school of
+# origin)
+ImportData <- function () {
 	# Step 4: Import attendance lists for all courses, merge with fee status info and fee info, 
 	# and calculate fee fraction for each student on each course
 	i = 1
@@ -112,9 +146,39 @@ ImportData <- function () {
 		CourseData[[i]] <<-CourseData[[i]][!grepl("PhD", CourseData[[i]]$Programme),]
 		# Don't have to remove auditing students at this point if prep work has done...
 		# Ready to proceed to merging files...
-			
+		# Need to document the number of MSc students within the course before merging, in case the FeeStatus data
+			#is incomplete
+			Pre_Merge_Length <<- length(CourseData[[i]]$UUN)
+			Pre_Merge_UUN <<- as.vector(CourseData[[i]]$UUN)
 		## Merges attendance list with fee status information
 		CourseData[[i]] <<-merge(CourseData[[i]], FeeStatus[ , c("UUN", "FSG")], by=c("UUN"))
+		# Need to now check if any students no longer appear in the data frame. If they don't appear it is because
+			# they weren't in the Fee Status sheet...and the most likely explanation for that is they are pursuing their
+			# studies for longer than initially anticipated (e.g. have had an interruption or concession to change status)
+			# If this happens, this should print a warning to prompt us to go back and find the missing student data and
+			# add it into the FeeStatus sheet if appropriate (i.e. unless they have already paid all their tuition AND we
+			# have already been paid for it, and it's just the delay in them actually participating in whichever course
+			Post_Merge_Length <<- length(CourseData[[i]]$UUN)
+			Post_Merge_UUN <<- as.vector(CourseData[[i]]$UUN)
+			Diff <- Post_Merge_Length - Pre_Merge_Length
+			
+			if (Diff <0) {
+				Highlights <- paste("Warning:", abs(Diff) , "Student(s) LOST during merge")
+			}
+			else {
+				Highlights <- ""
+			}
+			
+			# Code from: http://stackoverflow.com/questions/17598134/compare-two-lists-in-r
+			# Look for Teemu Daniel Laajala
+			Inboth <<- Pre_Merge_UUN[Pre_Merge_UUN %in% Post_Merge_UUN] # in both, same as call: intersect(first, second)
+			OnlyInPreMerge <- Pre_Merge_UUN[!Pre_Merge_UUN %in% Post_Merge_UUN] # only in 'first', same as: setdiff(first, second)
+			OnlyInPostMerge <- Post_Merge_UUN[!Post_Merge_UUN %in% Pre_Merge_UUN] # only in 'second', same as: setdiff(second, first)
+			
+			#For reference on listing lost UUNs in final column: 
+			# http://stackoverflow.com/questions/13973116/convert-r-vector-to-string-vector-of-1-element
+			Lost_Student_Check[i,] <<- c(Courses[i], Pre_Merge_Length, Post_Merge_Length, abs(Diff), Highlights, paste(OnlyInPreMerge, collapse=", "))			   
+					   
 		# Rename FSG column to be "Fee_Status"
 		names(CourseData[[i]])[8]<<-"Fee_Status"
 		# Change any entry with RUK or SEU as the Fee Status Group to H (thus everything is O or H) 
@@ -150,7 +214,7 @@ ImportData <- function () {
 	}
 	
 	names(CourseData) <<- Courses
-	
+	write.xlsx(Lost_Student_Check, "Outputs/LostStudentCheck_2016.xlsx")			 
 }
 
 #To execute:
