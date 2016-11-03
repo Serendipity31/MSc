@@ -72,28 +72,9 @@ ImportReferenceData <- function() {
 	## the only manual changes should be if someone is given an interruption of studies that we don't know about. This will
 	## be picked up by a check in the ImportData() function after it tries to merge with FeeData, so we can be prompted to
 	## see who is missing from the FeeStatus list who was enrolled in the course.
-		
-	#Generates excel file with just FS information (complete when know courses)
-FS.PGT.AnnualFinancialSummary <- function (file, FS_Admin, FS_Diss, FS_Courses, ) {
-	require(xlsx, quietly=TRUE)
-	objects <- list(FS_Admin, FS_Diss, FS_Courses, )
-	fargs <- as.list(match.call(expand.dots = TRUE))
-	objnames <- as.character(fargs)[-c(1,2)]
-	nobjects <- length(objects)
-	for (i in 1:nobjects) {
-		if (i ==1) {
-			write.xlsx(objects[[i]], file, sheetName = objnames[i])
-		}
-		else {
-			write.xlsx(objects[[i]], file, sheetName = objnames[i], append = TRUE)
-		}
-	}
-	print(paste("Workbook", file, "has", nobjects, "worksheets."))
-}
-
-FS.PGT.AnnualFinancialSummary("Outputs/FS_PGT_FinancialSummary_2016.xlsx", FS_Admin, FS_Diss, FS_Courses,)	
-		
-		
+	
+	ptstudents <- subset(FeeStatus, grepl("Part-time", FeeStatus$Programme, ignore.case=TRUE))
+	write.xlsx(ptstudents, paste("Outputs/PTStudent_from_FeeStatus_", yr, ".xlsx", sep="")
 		
 	# convert UUN column within FeeStatus to character to match with CourseData column
 	FeeStatus$UUN <- as.character(FeeStatus$UUN)
