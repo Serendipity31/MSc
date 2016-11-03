@@ -10,9 +10,9 @@
 
 # Step 1a: Set working directory to match the folder from Step 0, changing the code below as required, and load package xlsx
 
-setwd("C:/Users/Owner/Desktop/SRUC MOU R Test/")
+setwd("C:/Users/Owner/Desktop/SRUC MOU Calculation/")
 
-#at work: setwd("G:/CKD BAULCOMB/MSc Involvement/MOU Test documents/")
+#at work: setwd("G:/CKD BAULCOMB/MSc Involvement/SRUC MOU Calculation/")
 library(xlsx)
 
 # Step 1b: Initialise the following objects
@@ -24,7 +24,7 @@ Research_Groups <- c("LEES", "CropsSoils")
 # Step 1: Import data reference data (e.g. year, course names, tuition fee schedule, and fee status data)
 ImportReferenceData <- function() {
 	#Imports file containing year in which MSc commencses (e.g. 2016 for the 2016-2017 acadmeic year)
-	yr <<- read.xlsx("Inputs/ReferenceInfo/Year for Calculation.xlsx", sheetIndex=1, rowIndex=1, colIndex=1, header=FALSE)
+	yr <<- read.xlsx(yr, "_", yr+1, "/Inputs/ReferenceInfo/Year_for_Calculation.xlsx", sheetIndex=1, rowIndex=1, colIndex=1, header=FALSE)
 
 	#Trim trailing whitespace in case this appears
 		## Source of this approach is: http://stackoverflow.com/questions/2261079/how-to-trim-leading-and-trailing-whitespace-in-r
@@ -33,7 +33,7 @@ ImportReferenceData <- function() {
 	yr <<- yr[1,1]
 	
 	# Import the data table showing all SRUC courses, programmes that own them, RGs, and credits/weightings
-	SRUC_Courses <<- read.xlsx("Inputs/ReferenceInfo/SRUC Courses.xlsx", sheetIndex=1, header=TRUE, as.data.frame=TRUE)
+	SRUC_Courses <<- read.xlsx("Inputs/ReferenceInfo/SRUC_Courses.xlsx", sheetIndex=1, header=TRUE, as.data.frame=TRUE)
 	#Trim trailing whitespace in case this appears
 		## Source of this approach is: http://stackoverflow.com/questions/2261079/how-to-trim-leading-and-trailing-whitespace-in-r
 		### Look for sub-comment by Thieme Hennis Sep 19 '14 
@@ -50,6 +50,10 @@ ImportReferenceData <- function() {
 		## Source of this approach is: http://stackoverflow.com/questions/2261079/how-to-trim-leading-and-trailing-whitespace-in-r
 		### Look for sub-comment by Thieme Hennis Sep 19 '14 
 	TuitionFees <<- as.data.frame(apply(TuitionFees,2,function (x) sub("\\s+$", "", x)))
+	#Keep only 1st 5 columns to remove ODL and APC and any other fee info that's not useful
+	TuitionFees <<-	TuitionFees[1:5]
+	#Delete Programme Code column to ensure the stacking function works below
+	TuitionFees <<-	TuitionFees[-2]	
 	# Rename column showing programme name
 	names(TuitionFees)[names(TuitionFees)=="Name.of.Programme"] <- "Programme"
 	# Put all of the fee related information within one column (this is necessary for later)
@@ -64,17 +68,17 @@ ImportReferenceData <- function() {
 		## Source of this approach is: http://stackoverflow.com/questions/2261079/how-to-trim-leading-and-trailing-whitespace-in-r
 		### Look for sub-comment by Thieme Hennis Sep 19 '14 
 	FeeStatus <<- as.data.frame(apply(FeeStatus,2,function (x) sub("\\s+$", "", x)))
-	
+	FeeStatus <<- FeeStatus[,1:15]
 	#At this point, all the students are in the list, so need to select the subset consisting of all part time students in
 	# these schools, and export them to a file that can be used as the template for next year to ensure no one is missed out.
-	## In 2016, will have to pull in 2015 admissions data by hand, and may miss a few people on 3 year PT, but after this
-	## the only manual changes should be if someone is given an interruption of studies that we don't know about. This will
-	## be picked up by a check in the ImportData() function after it tries to merge with FeeData, so we can be prompted to
-	## see who is missing from the FeeStatus list who was enrolled in the course.
-	
-	ptstudents <- subset(FeeStatus, grepl("Part-time", FeeStatus$Programme, ignore.case=TRUE))
-	write.xlsx(ptstudents, paste("Outputs/PTStudent_from_FeeStatus_", yr, ".xlsx", sep="")
-		
+	## In 2016, will have to add Sydney Chandler in by hand (as the only one I know who stiched status from FT to PT
+	ptstudents <- subset(FeeStatus, grepl("/*P$", FeeStatus$Prog, ignore.case=TRUE))
+	#Export this file so that it's ready to go for next year
+	write.xlsx(ptstudents, paste("Outputs/FutureInputs/PTStudent_from_FeeStatus_", yr, ".xlsx", sep="")
+	# Search for and remove dupliate rows if students 'hang' around in the admissions system for years
+		   #this function should look at all columns to determine uniqueness, and then remove full rows
+		   #http://stats.stackexchange.com/questions/6759/removing-duplicated-rows-data-frame-in-r
+	FeeStatus <- FeeStatus[!duplicated(FeeStatus),]	   
 	# convert UUN column within FeeStatus to character to match with CourseData column
 	FeeStatus$UUN <- as.character(FeeStatus$UUN)
 }
@@ -92,7 +96,7 @@ ImportData <- function () {
 	## Imports attendance list
 	while (i <= length(Courses)) {
 		## Imports attendance list
-		fn <- paste("Inputs/Classes/", Courses[i], "CLASS LIST", yr, ".xlsx", sep=" ")
+		fn <- paste("Inputs/Classes/", Courses[i], "_CLASS_LIST_", yr, ".xlsx", sep=" ")
 		#Trim trailing whitespace in case this appears
 			## Source of this approach is: http://stackoverflow.com/questions/2261079/how-to-trim-leading-and-trailing-whitespace-in-r
 			### Look for sub-comment by Thieme Hennis Sep 19 '14 
