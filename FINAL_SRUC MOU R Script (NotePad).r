@@ -18,7 +18,6 @@ library(xlsx)
 # Step 1b: Initialise the following objects
 Programmes <- c("EE", "EPM", "FS", "SS", "SPH")	
 Research_Groups <- c("LEES", "CropsSoils")
-Lost_Student_Check <- data.frame(Course, Pre_Merge=numeric(), Post_Merge=numeric(), Difference=numeric(), Highlights=character(), Lost_UUNs=character(), stringsAsFactors=FALSE)
 
 ###PART 2: Calculations related to teaching
 
@@ -87,7 +86,7 @@ ImportData <- function () {
 	# Step 4: Import attendance lists for all courses, merge with fee status info and fee info, 
 	# and calculate fee fraction for each student on each course
 	i = 1
-	
+	Lost_Student_Check <- data.frame(Course, Pre_Merge=numeric(), Post_Merge=numeric(), Difference=numeric(), Highlights=character(), Lost_UUNs=character(), stringsAsFactors=FALSE)
 	CourseData <<- vector('list', length(Courses))
 		
 	## Imports attendance list
@@ -114,12 +113,13 @@ ImportData <- function () {
 		# Need to remove last 2 characters from UUN column
 		CourseData[[i]]$UUN <<- as.character(CourseData[[i]]$UUN)
 		CourseData[[i]]$UUN <<- substr(CourseData[[i]]$UUN, 1, nchar(CourseData[[i]]$UUN)-2)
-		# replace school names used by default in attendance list with ones matching the fees sheet
+		# replace school names used by default in attendance list with ones matching the what I want as table headers 
+			### Note: if need to match Fee Status sheet spellings, the only one to change is SPSS to "Social & Political Science"
 		# used this tip: http://stackoverflow.com/questions/22418864/r-replace-entire-strings-based-on-partial-match
 		# Need to specify column and/or change it to character from factor to get to work...
 		CourseData[[i]]$School <- as.character(CourseData[[i]]$School)
 		CourseData[[i]]$School[grepl("School Of Geosciences", CourseData[[i]]$School, ignore.case=FALSE)] <<- "GeoSciences"
-		CourseData[[i]]$School[grepl("School Of Social And Political Science", CourseData[[i]], ignore.case=FALSE)] <<- "Social & Political Science"
+		CourseData[[i]]$School[grepl("School Of Social And Political Science", CourseData[[i]], ignore.case=FALSE)] <<- "SPSS"
 		CourseData[[i]]$School[grepl("School Of Engineering", CourseData[[i]]$School, ignore.case=FALSE)] <<- "Engineering"
 		CourseData[[i]]$School[grepl("School Of Law", CourseData[[i]]$School, ignore.case=FALSE)] <<- "Law"
 		CourseData[[i]]$School[grepl("Business School", CourseData[[i]]$School, ignore.case=FALSE)] <<- "Business"
@@ -129,8 +129,8 @@ ImportData <- function () {
 		# Ready to proceed to merging files...
 		# Need to document the number of MSc students within the course before merging, in case the FeeStatus data
 			#is incomplete
-			Pre_Merge_Length <<- length(CourseData[[i]]$UUN)
-			Pre_Merge_UUN <<- as.vector(CourseData[[i]]$UUN)
+			Pre_Merge_Length <- length(CourseData[[i]]$UUN)
+			Pre_Merge_UUN <- as.vector(CourseData[[i]]$UUN)
 		## Merges attendance list with fee status information
 		CourseData[[i]] <<-merge(CourseData[[i]], FeeStatus[ , c("UUN", "FSG")], by=c("UUN"))
 		# Need to now check if any students no longer appear in the data frame. If they don't appear it is because
@@ -139,8 +139,8 @@ ImportData <- function () {
 			# If this happens, this should print a warning to prompt us to go back and find the missing student data and
 			# add it into the FeeStatus sheet if appropriate (i.e. unless they have already paid all their tuition AND we
 			# have already been paid for it, and it's just the delay in them actually participating in whichever course
-			Post_Merge_Length <<- length(CourseData[[i]]$UUN)
-			Post_Merge_UUN <<- as.vector(CourseData[[i]]$UUN)
+			Post_Merge_Length <- length(CourseData[[i]]$UUN)
+			Post_Merge_UUN <- as.vector(CourseData[[i]]$UUN)
 			Diff <- Post_Merge_Length - Pre_Merge_Length
 			
 			if (Diff <0) {
@@ -152,13 +152,13 @@ ImportData <- function () {
 			
 			# Code from: http://stackoverflow.com/questions/17598134/compare-two-lists-in-r
 			# Look for Teemu Daniel Laajala
-			Inboth <<- Pre_Merge_UUN[Pre_Merge_UUN %in% Post_Merge_UUN] # in both, same as call: intersect(first, second)
+			Inboth <- Pre_Merge_UUN[Pre_Merge_UUN %in% Post_Merge_UUN] # in both, same as call: intersect(first, second)
 			OnlyInPreMerge <- Pre_Merge_UUN[!Pre_Merge_UUN %in% Post_Merge_UUN] # only in 'first', same as: setdiff(first, second)
 			OnlyInPostMerge <- Post_Merge_UUN[!Post_Merge_UUN %in% Pre_Merge_UUN] # only in 'second', same as: setdiff(second, first)
 			
 			#For reference on listing lost UUNs in final column: 
 			# http://stackoverflow.com/questions/13973116/convert-r-vector-to-string-vector-of-1-element
-			Lost_Student_Check[i,] <<- c(Courses[i], Pre_Merge_Length, Post_Merge_Length, abs(Diff), Highlights, paste(OnlyInPreMerge, collapse=", "))			   
+			Lost_Student_Check[i,] <- c(Courses[i], Pre_Merge_Length, Post_Merge_Length, abs(Diff), Highlights, paste(OnlyInPreMerge, collapse=", "))			   
 					   
 		# Rename FSG column to be "Fee_Status"
 		names(CourseData[[i]])[8]<<-"Fee_Status"
@@ -195,7 +195,7 @@ ImportData <- function () {
 	}
 	
 	names(CourseData) <<- Courses
-	write.xlsx(Lost_Student_Check, "Outputs/LostStudentCheck_2016.xlsx")			 
+	write.xlsx(Lost_Student_Check, paste("Outputs/Tests/LostStudentCheck_", yr, ".xlsx", sep="", ), sheetName="Courses", append=TRUE)			 
 }
 
 #To execute:
@@ -293,18 +293,62 @@ EE_Dissertations2016
 		
 ###PART 3: Calculations related to dissertation supervision
 	
-#Step 1: Calculate and apportion income for SRUC students associated with dissertation supervision
+#Step 1: Calculate and apportion income for SRUC students associated with dissertation supervision. 
+# The data files must include PT students for each year they are paying fees, as an equal % is taken each year
 SRUC_Prog_DS <- function() {
 
 	i = 1
-	
+	Lost_Student_Check <- data.frame(Programme, Pre_Merge=numeric(), Post_Merge=numeric(), Difference=numeric(), Highlights=character(), Lost_UUNs=character(), stringsAsFactors=FALSE)
 	SRUC_Student_DS <<- vector('list', length(Programmes))
 		
 	while (i <= length(Programmes)) {
-		## Imports csv for each SRUC programme showing supervision details
-		fn <- paste("Inputs/", Programmes[i], "_Dissertations", yr, ".csv", sep="")
+		## Imports xlsx file for each SRUC programme showing supervision details
+		fn <- paste("Inputs/", Programmes[i], "_Dissertations", yr, ".xlsx", sep="")
 		## Creates dataframe associated with course that holds position i in Courses
-		SRUC_Student_DS[[i]]<<- as.data.frame(read.csv(fn, header=TRUE, sep=","))
+		SRUC_Student_DS[[i]]<<- read.xlsx(fn, header=TRUE, as.data.frame=TRUE)
+		#Trim trailing whitespace in case this appears
+			## Source of this approach is: http://stackoverflow.com/questions/2261079/how-to-trim-leading-and-trailing-whitespace-in-r
+			### Look for sub-comment by Thieme Hennis Sep 19 '14 
+			SRUC_Student_DS[[i]] <<- as.data.frame(apply(SRUC_Student_DS[[i]],2,function (x) sub("\\s+$", "", x)))
+		
+		
+		# Need to document the number of MSc students within the course before merging, in case the FeeStatus data
+			#is incomplete
+			Pre_Merge_Length <- length(SRUC_Student_DS[[i]]$UUN)
+			Pre_Merge_UUN <- as.vector(SRUC_Student_DS[[i]]$UUN)
+		## Merges attendance list with fee status information
+		SRUC_Student_DS[[i]] <<-merge(SRUC_Student_DS[[i]], FeeStatus[ , c("UUN", "FSG")], by=c("UUN"))
+		# Need to now check if any students no longer appear in the data frame. If they don't appear it is because
+			# they weren't in the Fee Status sheet...and the most likely explanation for that is they are pursuing their
+			# studies for longer than initially anticipated (e.g. have had an interruption or concession to change status)
+			# If this happens, this should print a warning to prompt us to go back and find the missing student data and
+			# add it into the FeeStatus sheet if appropriate (i.e. unless they have already paid all their tuition AND we
+			# have already been paid for it, and it's just the delay in them actually participating in whichever course
+			Post_Merge_Length <- length(SRUC_Student_DS[[i]]$UUN)
+			Post_Merge_UUN <- as.vector(SRUC_Student_DS[[i]]$UUN)
+			Diff <- Post_Merge_Length - Pre_Merge_Length
+			
+			if (Diff <0) {
+				Highlights <- paste("Warning:", abs(Diff) , "Student(s) LOST during merge")
+			}
+			else {
+				Highlights <- ""
+			}
+			
+			# Code from: http://stackoverflow.com/questions/17598134/compare-two-lists-in-r
+			# Look for Teemu Daniel Laajala
+			Inboth <- Pre_Merge_UUN[Pre_Merge_UUN %in% Post_Merge_UUN] # in both, same as call: intersect(first, second)
+			OnlyInPreMerge <- Pre_Merge_UUN[!Pre_Merge_UUN %in% Post_Merge_UUN] # only in 'first', same as: setdiff(first, second)
+			OnlyInPostMerge <- Post_Merge_UUN[!Post_Merge_UUN %in% Pre_Merge_UUN] # only in 'second', same as: setdiff(second, first)
+			
+			#For reference on listing lost UUNs in final column: 
+			# http://stackoverflow.com/questions/13973116/convert-r-vector-to-string-vector-of-1-element
+			Lost_Student_Check[i,] <- c(Programmes[i], Pre_Merge_Length, Post_Merge_Length, abs(Diff), Highlights, paste(OnlyInPreMerge, collapse=", "))			   
+					   
+		# Rename FSG column to be "Fee_Status"
+		names(SRUC_Student_DS[[i]])[names(SRUC_Student_DS[[i]])=="FSG"] <<-"Fee_Status"
+		# Change any entry with RUK or SEU as the Fee Status Group to H (thus everything is O or H) 
+		SRUC_Student_DS[[i]]$Fee_Status[grepl("RUK|SEU", SRUC_Student_DS[[i]]$Fee_Status, ignore.case=FALSE)] <<- "H"
 		## Merges supervision list with fee information
 		SRUC_Student_DS[[i]]<<-merge(SRUC_Student_DS[[i]], TuitionFees[ , c("Tuition", "Programme", "Fee_Status")], by=c("Programme", "Fee_Status"))
 		## Re-orders supervision list with fee information so it's easier to read
@@ -319,6 +363,7 @@ SRUC_Prog_DS <- function() {
 	}
 	
 	names(SRUC_Student_DS) <<- Programmes
+	write.xlsx(Lost_Student_Check, paste("Outputs/Tests/LostStudentCheck_", yr, ".xlsx", sep="", ), sheetName="IntDS", append=TRUE)							     
 	
 	# Calculates allocation of disertation supervision funds for SRUC students
 	j = 1
@@ -352,9 +397,55 @@ ProgrammeFinances_SRUCstudent_DS["EE",]
 #Step 2: Calculates supervision fees associated with SRUC staff supervising non-SRUC students
 SRUC_ExternalStudent_DS <- function() {
 	
-	## Imports csv for showing external student supervision details
-	fn <- paste("Inputs", "SRUC_ExternalDissertations", yr, ".csv", sep="")
-	SRUC_ExternalStudent_DS <<- as.data.frame(read.csv(fn, header=TRUE, sep=","))
+	Lost_Student_Check <- data.frame(Research_Group=character(), Pre_Merge=numeric(), Post_Merge=numeric(), Difference=numeric(), Highlights=character(), Lost_UUNs=character(), stringsAsFactors=FALSE)
+	## Imports xlsx for showing external student supervision details
+	fn <- paste("Inputs", "SRUC_ExternalDissertations", yr, ".xlsx", sep="")
+	SRUC_ExternalStudent_DS <<- read.xlsx(fn, header=TRUE, as.data.frame=TRUE)
+	
+	#Trim trailing whitespace in case this appears
+			## Source of this approach is: http://stackoverflow.com/questions/2261079/how-to-trim-leading-and-trailing-whitespace-in-r
+			### Look for sub-comment by Thieme Hennis Sep 19 '14 
+			SRUC_ExternalStudent_DS[[i]] <<- as.data.frame(apply(SRUC_ExternalStudent_DS[[i]],2,function (x) sub("\\s+$", "", x)))
+		
+		
+		# Need to document the number of MSc students within the course before merging, in case the FeeStatus data
+			#is incomplete
+			Pre_Merge_Length <- length(SRUC_ExternalStudent_DS[[i]]$UUN)
+			Pre_Merge_UUN <- as.vector(SRUC_ExternalStudent_DS[[i]]$UUN)
+		## Merges attendance list with fee status information
+		SRUC_ExternalStudent_DS[[i]] <<-merge(SRUC_ExternalStudent_DS[[i]], FeeStatus[ , c("UUN", "FSG")], by=c("UUN"))
+		# Need to now check if any students no longer appear in the data frame. If they don't appear it is because
+			# they weren't in the Fee Status sheet...and the most likely explanation for that is they are pursuing their
+			# studies for longer than initially anticipated (e.g. have had an interruption or concession to change status)
+			# If this happens, this should print a warning to prompt us to go back and find the missing student data and
+			# add it into the FeeStatus sheet if appropriate (i.e. unless they have already paid all their tuition AND we
+			# have already been paid for it, and it's just the delay in them actually participating in whichever course
+			Post_Merge_Length <- length(SRUC_ExternalStudent_DS[[i]]$UUN)
+			Post_Merge_UUN <- as.vector(SRUC_ExternalStudent_DS[[i]]$UUN)
+			Diff <- Post_Merge_Length - Pre_Merge_Length
+			
+			if (Diff <0) {
+				Highlights <- paste("Warning:", abs(Diff) , "Student(s) LOST during merge")
+			}
+			else {
+				Highlights <- ""
+			}
+			
+			# Code from: http://stackoverflow.com/questions/17598134/compare-two-lists-in-r
+			# Look for Teemu Daniel Laajala
+			Inboth <- Pre_Merge_UUN[Pre_Merge_UUN %in% Post_Merge_UUN] # in both, same as call: intersect(first, second)
+			OnlyInPreMerge <- Pre_Merge_UUN[!Pre_Merge_UUN %in% Post_Merge_UUN] # only in 'first', same as: setdiff(first, second)
+			OnlyInPostMerge <- Post_Merge_UUN[!Post_Merge_UUN %in% Pre_Merge_UUN] # only in 'second', same as: setdiff(second, first)
+			
+			#For reference on listing lost UUNs in final column: 
+			# http://stackoverflow.com/questions/13973116/convert-r-vector-to-string-vector-of-1-element
+			Lost_Student_Check[i,] <- c(Research_Groups[i], Pre_Merge_Length, Post_Merge_Length, abs(Diff), Highlights, paste(OnlyInPreMerge, collapse=", "))			   
+					   
+		# Rename FSG column to be "Fee_Status"
+		names(SRUC_ExternalStudent_DS[[i]])[names(SRUC_ExternalStudent_DS[[i]])=="FSG"] <<-"Fee_Status"
+		# Change any entry with RUK or SEU as the Fee Status Group to H (thus everything is O or H) 
+		SRUC_ExternalStudent_DS[[i]]$Fee_Status[grepl("RUK|SEU", SRUC_ExternalStudent_DS[[i]]$Fee_Status, ignore.case=FALSE)] <<- "H"
+		
 	## Merges supervision list with fee information
 	SRUC_ExternalStudent_DS <<-merge(SRUC_ExternalStudent_DS, TuitionFees[ , c("Tuition", "Programme", "Fee_Status")], by=c("Programme", "Fee_Status"))
 	## Re-orders supervision list with fee information so it's easier to read
@@ -377,7 +468,8 @@ SRUC_ExternalStudent_DS <- function() {
 	}
 	
 	names(RGData) <<- Research_Groups
-	
+	write.xlsx(Lost_Student_Check, paste("Outputs/Tests/LostStudentCheck_", yr, ".xlsx", sep="", ), sheetName="ExtDS", append=TRUE)
+				
 	# Creates summary financial picture by research group 
 	j = 1
 	RGFinances <<- data.frame(All=numeric(), GS=numeric(), SPSS=numeric(), Law=numeric(), Engineering=numeric(),Business=numeric(), stringsAsFactors=FALSE)
@@ -403,8 +495,7 @@ SRUC_ExternalStudent_DS <- function() {
 		
 		## Advances to the next course and repeats above steps until the list of courses is exhausted
 		j = j+1
-	}
-		
+	}	
 }
 
 #To Check inputs worked
@@ -423,14 +514,59 @@ RGFinances["LEES",]
 SRUC_Admin <- function() {
 
 	i = 1
-	
+	Lost_Student_Check <- data.frame(Programme, Pre_Merge=numeric(), Post_Merge=numeric(), Difference=numeric(), Highlights=character(), Lost_UUNs=character(), stringsAsFactors=FALSE)
 	SRUC_AdminData <<- vector('list', length(Programmes))
 		
 	while (i <= length(Programmes)) {
 		## Imports csv for each SRUC programme showing supervision details
-		fn <- paste("Inputs/",Programmes[i], "_Dissertations", yr, ".csv", sep="")
+		fn <- paste("Inputs/",Programmes[i], "_Dissertations", yr, ".xlsx", sep="")
 		## Creates dataframe associated with course that holds position i in Courses
-		SRUC_AdminData[[i]]<<- as.data.frame(read.csv(fn, header=TRUE, sep=","))
+		SRUC_AdminData[[i]]<<- read.xlsx(fn, header=TRUE, as.data.frame=TRUE)
+		
+		#Trim trailing whitespace in case this appears
+			## Source of this approach is: http://stackoverflow.com/questions/2261079/how-to-trim-leading-and-trailing-whitespace-in-r
+			### Look for sub-comment by Thieme Hennis Sep 19 '14 
+			SRUC_AdminData[[i]] <<- as.data.frame(apply(SRUC_AdminData[[i]],2,function (x) sub("\\s+$", "", x)))
+		
+		
+		# Need to document the number of MSc students within the course before merging, in case the FeeStatus data
+			#is incomplete
+			Pre_Merge_Length <- length(SRUC_AdminData[[i]]$UUN)
+			Pre_Merge_UUN <- as.vector(SRUC_AdminData[[i]]$UUN)
+		## Merges attendance list with fee status information
+		SRUC_AdminData[[i]] <<-merge(SRUC_AdminData[[i]], FeeStatus[ , c("UUN", "FSG")], by=c("UUN"))
+		# Need to now check if any students no longer appear in the data frame. If they don't appear it is because
+			# they weren't in the Fee Status sheet...and the most likely explanation for that is they are pursuing their
+			# studies for longer than initially anticipated (e.g. have had an interruption or concession to change status)
+			# If this happens, this should print a warning to prompt us to go back and find the missing student data and
+			# add it into the FeeStatus sheet if appropriate (i.e. unless they have already paid all their tuition AND we
+			# have already been paid for it, and it's just the delay in them actually participating in whichever course
+			Post_Merge_Length <- length(SRUC_AdminData[[i]]$UUN)
+			Post_Merge_UUN <- as.vector(SRUC_AdminData[[i]]$UUN)
+			Diff <- Post_Merge_Length - Pre_Merge_Length
+			
+			if (Diff <0) {
+				Highlights <- paste("Warning:", abs(Diff) , "Student(s) LOST during merge")
+			}
+			else {
+				Highlights <- ""
+			}
+			
+			# Code from: http://stackoverflow.com/questions/17598134/compare-two-lists-in-r
+			# Look for Teemu Daniel Laajala
+			Inboth <- Pre_Merge_UUN[Pre_Merge_UUN %in% Post_Merge_UUN] # in both, same as call: intersect(first, second)
+			OnlyInPreMerge <- Pre_Merge_UUN[!Pre_Merge_UUN %in% Post_Merge_UUN] # only in 'first', same as: setdiff(first, second)
+			OnlyInPostMerge <- Post_Merge_UUN[!Post_Merge_UUN %in% Pre_Merge_UUN] # only in 'second', same as: setdiff(second, first)
+			
+			#For reference on listing lost UUNs in final column: 
+			# http://stackoverflow.com/questions/13973116/convert-r-vector-to-string-vector-of-1-element
+			Lost_Student_Check[i,] <- c(Programmes[i], Pre_Merge_Length, Post_Merge_Length, abs(Diff), Highlights, paste(OnlyInPreMerge, collapse=", "))			   
+					   
+		# Rename FSG column to be "Fee_Status"
+		names(SRUC_AdminData[[i]])[names(SRUC_AdminData[[i]])=="FSG"] <<-"Fee_Status"
+		# Change any entry with RUK or SEU as the Fee Status Group to H (thus everything is O or H) 
+		SRUC_AdminData[[i]]$Fee_Status[grepl("RUK|SEU", SRUC_AdminData[[i]]$Fee_Status, ignore.case=FALSE)] <<- "H"
+		
 		## Merges supervision list with fee information
 		SRUC_AdminData[[i]]<<-merge(SRUC_AdminData[[i]], TuitionFees[ , c("Tuition", "Programme", "Fee_Status")], by=c("Programme", "Fee_Status"))
 		## Re-orders supervision list with fee information so it's easier to read
@@ -449,10 +585,11 @@ SRUC_Admin <- function() {
 		## Advances to the next course and repeats above steps until the list of programmes is exhausted
 		i = i+1
 	}
-	
+							
 	names(SRUC_AdminData) <<- Programmes
-	
-	# COlates summary information on admin fee by programme and SRUC vs. GeoSciences
+	write.xlsx(Lost_Student_Check, paste("Outputs/Tests/LostStudentCheck_", yr, ".xlsx", sep="", ), sheetName="Admin", append=TRUE)							    
+
+	# Colates summary information on admin fee by programme and SRUC vs. GeoSciences
 	j = 1
 	
 	ProgrammeFinances_Admin <<- data.frame(All=numeric(), SRUC=numeric(), GeoSciences=numeric(), stringsAsFactors=FALSE)
@@ -472,7 +609,7 @@ SRUC_Admin <- function() {
 		
 		## Advances to the next course and repeats above steps until the list of courses is exhausted
 		j = j+1
-	}
+	}	
 }
 	
 #To Check inputs worked		
@@ -641,33 +778,55 @@ SRUC_InstitutionalSummary["EE",]
 		PPP_Summary <- CourseData[4]
 		EIA_Summary <- CourseData[5]
 		
-		#EPM Worksheets (complete when know courses)
+		#EPM Worksheets 
 		EPM_Admin <- SRUC_AdminData[2]
 		EPM_Diss <- SRUC_Student_DS[2]
 		EPM_Courses <- ProgrammeData_TC[2]
-		
-		#FS Worksheets(complete when know courses)
+		AQCG_Summary <- CourseData[6]
+		LUEI_Summary <- CourseData[7]						    
+		WRM_Summary <- CourseData[8]						    
+		EVM_Summary <- CourseData[9]
+		AEST_Summary <- CourseData[10]						    
+								    
+		#FS Worksheets
 		FS_Admin <- SRUC_AdminData[3]
 		FS_Diss <- SRUC_Student_DS[3]
 		FS_Courses <- ProgrammeData_TC[3]
-		
-		#SS Worksheets (complete when know courses)
+		FAFS_Summary <- CourseData[11]
+		IFS_Summary <- CourseData[12]						    
+		SFP_Summary <- CourseData[13]						    
+								    
+		#SS Worksheets 
 		SS_Admin <- SRUC_AdminData[4]
 		SS_Diss <- SRUC_Student_DS[4]
 		SS_Courses <- ProgrammeData_TC[4]
-		
-		#SPH Worksheets (complete when know courses)
+		SPM_Summary <- CourseData[14]
+		SET_Summary <- CourseData[15]						    
+		SSCA_Summary <- CourseData[16]						    
+								    
+		#SPH Worksheets
 		SPH_Admin <- SRUC_AdminData[5]
 		SPH_Diss <- SRUC_Student_DS[5]
 		SPH_Courses <- ProgrammeData_TC[5]
+		FPH_Summary <- CourseData[17]
+		FOPH_Summary <- CourseData[18]
+		PHGC_Summary <- CourseData[19]						    
 
 #Basing it on approach shown here: https://statmethods.wordpress.com/2014/06/19/quickly-export-multiple-r-objects-to-an-excel-workbook/
 
 SRUC.PGT.AnnualFinancialSummary <- function (file, SRUC_Summary, Admin_Summary,
-													EE_Admin, EE_Diss, LEES_Diss, EE_Courses, FEE_Summary, EV_Summary, AEE_Summary, PPP_Summary, EIA_Summary) {
+								EE_Admin, EE_Diss, LEES_Diss, EE_Courses, FEE_Summary, EV_Summary, AEE_Summary, PPP_Summary, EIA_Summary,
+					    			EPM_Admin, EPM_Diss, EPM_Courses, AQCG_Summary, LUEI_Summary, WRM_Summary, EVM_Summary, AEST_Summary, 
+					    			FS_Admin, FS_Diss, FS_Courses, FAFS_Summary, IFS_Summary, SFP_Summary,
+					    			SS_Admin, SS_Diss, SS_Courses, SPM_Summary, SET_Summary, SSCA_Summary,
+					    			SPH_Admin, SPH_Diss, SPH_Courses, FPH_Summary, SOPH_Summary, PHGC_Summary) {
 	require(xlsx, quietly=TRUE)
 	objects <- list(SRUC_Summary, Admin_Summary,
-					EE_Admin, EE_Diss, LEES_Diss, EE_Courses, FEE_Summary, EV_Summary, AEE_Summary, PPP_Summary, EIA_Summary)
+					EE_Admin, EE_Diss, LEES_Diss, EE_Courses, FEE_Summary, EV_Summary, AEE_Summary, PPP_Summary, EIA_Summary,
+		       			EPM_Admin, EPM_Diss, EPM_Courses, AQCG_Summary, LUEI_Summary, WRM_Summary, EVM_Summary, AEST_Summary, 
+					FS_Admin, FS_Diss, FS_Courses, FAFS_Summary, IFS_Summary, SFP_Summary,
+					SS_Admin, SS_Diss, SS_Courses, SPM_Summary, SET_Summary, SSCA_Summary,
+					SPH_Admin, SPH_Diss, SPH_Courses, FPH_Summary, SOPH_Summary, PHGC_Summary)
 	fargs <- as.list(match.call(expand.dots = TRUE))
 	objnames <- as.character(fargs)[-c(1,2)]
 	nobjects <- length(objects)
@@ -683,8 +842,12 @@ SRUC.PGT.AnnualFinancialSummary <- function (file, SRUC_Summary, Admin_Summary,
 }
 
 #To generate the Excel workbook, run this code
-SRUC.PGT.AnnualFinancialSummary("Outputs/SRUC_PGT_FinancialSummary_2016.xlsx", SRUC_Summary, Admin_Summary,
-								EE_Admin, EE_Diss, LEES_Diss, EE_Courses, FEE_Summary, EV_Summary, AEE_Summary, PPP_Summary, EIA_Summary)
+SRUC.PGT.AnnualFinancialSummary(paste("Outputs/SRUC_PGT_FinancialSummary_", yr, ".xlsx", sep=""), SRUC_Summary, Admin_Summary,
+					EE_Admin, EE_Diss, LEES_Diss, EE_Courses, FEE_Summary, EV_Summary, AEE_Summary, PPP_Summary, EIA_Summary,
+		       			EPM_Admin, EPM_Diss, EPM_Courses, AQCG_Summary, LUEI_Summary, WRM_Summary, EVM_Summary, AEST_Summary, 
+					FS_Admin, FS_Diss, FS_Courses, FAFS_Summary, IFS_Summary, SFP_Summary,
+					SS_Admin, SS_Diss, SS_Courses, SPM_Summary, SET_Summary, SSCA_Summary,
+					SPH_Admin, SPH_Diss, SPH_Courses, FPH_Summary, SOPH_Summary, PHGC_Summary)
 
 #Generates excel file with just EE information
 EE.PGT.AnnualFinancialSummary <- function (file, EE_Admin, EE_Diss, LEES_Diss, EE_Courses, FEE_Summary, EV_Summary, AEE_Summary, PPP_Summary, EIA_Summary) {
@@ -704,12 +867,12 @@ EE.PGT.AnnualFinancialSummary <- function (file, EE_Admin, EE_Diss, LEES_Diss, E
 	print(paste("Workbook", file, "has", nobjects, "worksheets."))
 }
 
-EE.PGT.AnnualFinancialSummary("Outputs/EE_PGT_FinancialSummary_2016.xlsx", EE_Admin, EE_Diss, LEES_Diss, EE_Courses, FEE_Summary, EV_Summary, AEE_Summary, PPP_Summary, EIA_Summary)
+EE.PGT.AnnualFinancialSummary(paste("Outputs/EE_PGT_FinancialSummary_", yr, ".xlsx", sep=""), EE_Admin, EE_Diss, LEES_Diss, EE_Courses, FEE_Summary, EV_Summary, AEE_Summary, PPP_Summary, EIA_Summary)
 
-#Generates excel file with just EPM information (complete when know courses)
-EPM.PGT.AnnualFinancialSummary <- function (file, EPM_Admin, EPM_Diss, EPM_Courses, ) {
+#Generates excel file with just EPM information
+EPM.PGT.AnnualFinancialSummary <- function (file, EPM_Admin, EPM_Diss, EPM_Courses, AQCG_Summary, LUEI_Summary, WRM_Summary, EVM_Summary, AEST_Summary) {
 	require(xlsx, quietly=TRUE)
-	objects <- list(EPM_Admin, EPM_Diss, EPM_Courses, )
+	objects <- list(EPM_Admin, EPM_Diss, EPM_Courses, AQCG_Summary, LUEI_Summary, WRM_Summary, EVM_Summary, AEST_Summary)
 	fargs <- as.list(match.call(expand.dots = TRUE))
 	objnames <- as.character(fargs)[-c(1,2)]
 	nobjects <- length(objects)
@@ -724,12 +887,12 @@ EPM.PGT.AnnualFinancialSummary <- function (file, EPM_Admin, EPM_Diss, EPM_Cours
 	print(paste("Workbook", file, "has", nobjects, "worksheets."))
 }
 
-EPM.PGT.AnnualFinancialSummary("Outputs/EPM_PGT_FinancialSummary_2016.xlsx", EPM_Admin, EPM_Diss, EPM_Courses,)
+EPM.PGT.AnnualFinancialSummary(paste("Outputs/EPM_PGT_FinancialSummary_", yr, ".xlsx", sep=""), EPM_Admin, EPM_Diss, EPM_Courses, AQCG_Summary, LUEI_Summary, WRM_Summary, EVM_Summary, AEST_Summary)
 
-#Generates excel file with just FS information (complete when know courses)
-FS.PGT.AnnualFinancialSummary <- function (file, FS_Admin, FS_Diss, FS_Courses, ) {
+#Generates excel file with just FS information
+FS.PGT.AnnualFinancialSummary <- function (file, FS_Admin, FS_Diss, FS_Courses, FAFS_Summary, IFS_Summary, SFP_Summary) {
 	require(xlsx, quietly=TRUE)
-	objects <- list(FS_Admin, FS_Diss, FS_Courses, )
+	objects <- list(FS_Admin, FS_Diss, FS_Courses, FAFS_Summary, IFS_Summary, SFP_Summary)
 	fargs <- as.list(match.call(expand.dots = TRUE))
 	objnames <- as.character(fargs)[-c(1,2)]
 	nobjects <- length(objects)
@@ -744,12 +907,12 @@ FS.PGT.AnnualFinancialSummary <- function (file, FS_Admin, FS_Diss, FS_Courses, 
 	print(paste("Workbook", file, "has", nobjects, "worksheets."))
 }
 
-FS.PGT.AnnualFinancialSummary("Outputs/FS_PGT_FinancialSummary_2016.xlsx", FS_Admin, FS_Diss, FS_Courses,)
+FS.PGT.AnnualFinancialSummary(paste("Outputs/FS_PGT_FinancialSummary_", yr, ".xlsx", sep=""), FS_Admin, FS_Diss, FS_Courses, FAFS_Summary, IFS_Summary, SFP_Summary)
 
-#Generates excel file with just SS information (complete when know courses)
-SS.PGT.AnnualFinancialSummary <- function (file, SS_Admin, SS_Diss, SS_Courses, ) {
+#Generates excel file with just SS information 
+SS.PGT.AnnualFinancialSummary <- function (file, SS_Admin, SS_Diss, SS_Courses, SPM_Summary, SET_Summary, SSCA_Summary) {
 	require(xlsx, quietly=TRUE)
-	objects <- list(SS_Admin, SS_Diss, SS_Courses, )
+	objects <- list(SS_Admin, SS_Diss, SS_Courses, SPM_Summary, SET_Summary, SSCA_Summary)
 	fargs <- as.list(match.call(expand.dots = TRUE))
 	objnames <- as.character(fargs)[-c(1,2)]
 	nobjects <- length(objects)
@@ -764,12 +927,12 @@ SS.PGT.AnnualFinancialSummary <- function (file, SS_Admin, SS_Diss, SS_Courses, 
 	print(paste("Workbook", file, "has", nobjects, "worksheets."))
 }
 
-FS.PGT.AnnualFinancialSummary("Outputs/SS_PGT_FinancialSummary_2016.xlsx", SS_Admin, SS_Diss, SS_Courses,)
+FS.PGT.AnnualFinancialSummary(paste("Outputs/SS_PGT_FinancialSummary_", yr, ".xlsx", sep=""), SS_Admin, SS_Diss, SS_Courses, SPM_Summary, SET_Summary, SSCA_Summary)
 
-#Generates excel file with just SPH information (complete when know courses)
-SPH.PGT.AnnualFinancialSummary <- function (file, SPH_Admin, SPH_Diss, SPH_Courses, ) {
+#Generates excel file with just SPH information 
+SPH.PGT.AnnualFinancialSummary <- function (file, SPH_Admin, SPH_Diss, SPH_Courses, FPH_Summary, SOPH_Summary, PHGC_Summary) {
 	require(xlsx, quietly=TRUE)
-	objects <- list(SPH_Admin, SPH_Diss, SPH_Courses, )
+	objects <- list(SPH_Admin, SPH_Diss, SPH_Courses, FPH_Summary, SOPH_Summary, PHGC_Summary)
 	fargs <- as.list(match.call(expand.dots = TRUE))
 	objnames <- as.character(fargs)[-c(1,2)]
 	nobjects <- length(objects)
@@ -784,7 +947,7 @@ SPH.PGT.AnnualFinancialSummary <- function (file, SPH_Admin, SPH_Diss, SPH_Cours
 	print(paste("Workbook", file, "has", nobjects, "worksheets."))
 }
 
-SPH.PGT.AnnualFinancialSummary("Outputs/SPH_PGT_FinancialSummary_2016.xlsx", SPH_Admin, SPH_Diss, SPH_Courses,)
+SPH.PGT.AnnualFinancialSummary(paste("Outputs/SPH_PGT_FinancialSummary_", yr, ".xlsx", sep=""), SPH_Admin, SPH_Diss, SPH_Courses, FPH_Summary, SOPH_Summary, PHGC_Summary)
 
 
 
