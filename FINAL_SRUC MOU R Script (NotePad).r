@@ -10,9 +10,9 @@
 
 # Step 1a: Set working directory to match the folder from Step 0, changing the code below as required, and load package xlsx
 
-setwd("C:/Users/Owner/Desktop/SRUC MOU Calculation/")
+setwd("C:/Users/Owner/Desktop/SRUC MOU Calculation/2016_2017")
 
-#at work: setwd("G:/CKD BAULCOMB/MSc Involvement/SRUC MOU Calculation/")
+#at work: setwd("G:/CKD BAULCOMB/MSc Involvement/SRUC MOU Calculation/2016_2017")
 library(xlsx)
 
 # Step 1b: Initialise the following objects
