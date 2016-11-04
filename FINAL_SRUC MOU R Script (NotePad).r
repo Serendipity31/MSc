@@ -219,7 +219,7 @@ Course_Level_Finances <- function() {
 	
 	i = 1
 	
-	CourseFinances <<- data.frame(All=numeric(), GS=numeric(), SPSS=numeric(), Law=numeric(), Engineering=numeric(),Business=numeric(), stringsAsFactors=FALSE)
+	CourseFinances <<- data.frame(All=numeric(), GeoSciences=numeric(), SPSS=numeric(), Law=numeric(), Engineering=numeric(),Business=numeric(), stringsAsFactors=FALSE)
 	
 	while (i <= length(Courses)) {
 		#Step 1: Define subsets of dataframes to group students from different schools on each course
@@ -269,12 +269,12 @@ Programme_Level_Finances_Teaching <- function() {
 	
 	#Creates a summary table of programme finances
 	j=1
-	ProgrammeFinances_TC <<- data.frame(All=numeric(), GS=numeric(), SPSS=numeric(), Law=numeric(), Engineering=numeric(),Business=numeric(), stringsAsFactors=FALSE)
+	ProgrammeFinances_TC <<- data.frame(All=numeric(), GeoSciences=numeric(), SPSS=numeric(), Law=numeric(), Engineering=numeric(),Business=numeric(), stringsAsFactors=FALSE)
 	
 	while (j <= length(Programmes)) {
 		#Within the dataframe showing courses owned by programmes, sum the relevant tuition fee components by column
 		Total_All <- sum(ProgrammeData_TC[[j]]$All)
-		Total_gs <- sum(ProgrammeData_TC[[j]]$GS)
+		Total_gs <- sum(ProgrammeData_TC[[j]]$GeoSciences)
 		Total_spss <- sum(ProgrammeData_TC[[j]]$SPSS)
 		Total_law <- sum(ProgrammeData_TC[[j]]$Law)
 		Total_eng <- sum(ProgrammeData_TC[[j]]$Engineering)
@@ -356,18 +356,18 @@ SRUC_Prog_DS <- function() {
 		## Merges supervision list with fee information
 		SRUC_Student_DS[[i]]<<-merge(SRUC_Student_DS[[i]], TuitionFees[ , c("Tuition", "Programme", "Fee_Status")], by=c("Programme", "Fee_Status"))
 		## Re-orders supervision list with fee information so it's easier to read
-		SRUC_Student_DS[[i]]<<-SRUC_Student_DS[[i]][c("UUN", "Surname", "Forename", "Programme", "School", "Supervisor", "Organisation", "Detail", "Fee_Status", "Tuition")]
+		SRUC_Student_DS[[i]]<<-SRUC_Student_DS[[i]][c("UUN", "Surname", "Forename", "Programme", "Matriculation", "Enrollment", "School", "Supervisor", "Organisation", "Detail", "Fee_Status", "Tuition")]
 		## Calculates portion of total fee associated with each student's supervision
-		SRUC_Student_DS[[i]][,11]<<-(0.10 * SRUC_Student_DS[[i]][,10])
+		SRUC_Student_DS[[i]][,13]<<-(0.10 * SRUC_Student_DS[[i]][,12])
 		## Names this column to highlight the fee portion due to each student on the programme for supervision
-		names(SRUC_Student_DS[[i]])[names(SRUC_Student_DS[[i]])=="V11"]<<-"Supervision_Fee"
+		names(SRUC_Student_DS[[i]])[names(SRUC_Student_DS[[i]])=="V13"]<<-"Supervision_Fee"
 		
 		## Advances to the next course and repeats above steps until the list of programmes is exhausted
 		i = i+1
 	}
 	
 	names(SRUC_Student_DS) <<- Programmes
-	write.xlsx(Lost_Student_Check, paste("Outputs/Tests/LostStudentCheck_", yr, ".xlsx", sep="", ), sheetName="IntDS", append=TRUE)							     
+	write.xlsx(Lost_Student_Check, paste("Outputs/Tests/LostStudentCheck_", yr, ".xlsx", sep="", ), sheetName="IntStudDS", append=TRUE)							     
 	
 	# Calculates allocation of disertation supervision funds for SRUC students
 	j = 1
@@ -453,11 +453,11 @@ SRUC_ExternalStudent_DS <- function() {
 	## Merges supervision list with fee information
 	SRUC_ExternalStudent_DS <<-merge(SRUC_ExternalStudent_DS, TuitionFees[ , c("Tuition", "Programme", "Fee_Status")], by=c("Programme", "Fee_Status"))
 	## Re-orders supervision list with fee information so it's easier to read
-	SRUC_ExternalStudent_DS<<-SRUC_ExternalStudent_DS[c("UUN", "Surname", "Forename", "Programme", "School", "Supervisor", "Research_Group", "Fee_Status", "Tuition")]
+	SRUC_ExternalStudent_DS<<-SRUC_ExternalStudent_DS[c("UUN", "Surname", "Forename", "Programme", "Matriculation", "Enrollment", "School", "Supervisor", "Research_Group", "Fee_Status", "Tuition")]
 	## Calculates portion of total fee associated with each student's supervision
-	SRUC_ExternalStudent_DS[,10]<<-(0.10 * SRUC_ExternalStudent_DS[,9])
+	SRUC_ExternalStudent_DS[,12]<<-(0.10 * SRUC_ExternalStudent_DS[,11])
 	## Names this column to highlight the fee portion due to each student on the programme for supervision
-	names(SRUC_ExternalStudent_DS)[names(SRUC_ExternalStudent_DS)=="V10"]<<-"Supervision_Fee"
+	names(SRUC_ExternalStudent_DS)[names(SRUC_ExternalStudent_DS)=="V12"]<<-"Supervision_Fee"
 	
 	#Provides data on students by supervisor research group
 	i = 1
@@ -472,7 +472,7 @@ SRUC_ExternalStudent_DS <- function() {
 	}
 	
 	names(RGData) <<- Research_Groups
-	write.xlsx(Lost_Student_Check, paste("Outputs/Tests/LostStudentCheck_", yr, ".xlsx", sep="", ), sheetName="ExtDS", append=TRUE)
+	write.xlsx(Lost_Student_Check, paste("Outputs/Tests/LostStudentCheck_", yr, ".xlsx", sep="", ), sheetName="ExtStudDS", append=TRUE)
 				
 	# Creates summary financial picture by research group 
 	j = 1
@@ -574,17 +574,17 @@ SRUC_Admin <- function() {
 		## Merges supervision list with fee information
 		SRUC_AdminData[[i]]<<-merge(SRUC_AdminData[[i]], TuitionFees[ , c("Tuition", "Programme", "Fee_Status")], by=c("Programme", "Fee_Status"))
 		## Re-orders supervision list with fee information so it's easier to read
-		SRUC_AdminData[[i]]<<-SRUC_AdminData[[i]][c("UUN", "Surname", "Forename", "Programme", "School", "Supervisor", "Organisation", "Detail", "Fee_Status", "Tuition")]
+		SRUC_AdminData[[i]]<<-SRUC_AdminData[[i]][c("UUN", "Surname", "Forename", "Programme", "Matriculation", "Enrollment", "School", "Supervisor", "Organisation", "Detail", "Fee_Status", "Tuition")]
 		## Calculates portion of total fee associated with admin for each student
-		SRUC_AdminData[[i]][,11]<<-(0.40 * SRUC_AdminData[[i]][,10])
+		SRUC_AdminData[[i]][,13]<<-(0.40 * SRUC_AdminData[[i]][,12])
 		## Names this column to highlight the fee portion due for admin
-		names(SRUC_AdminData[[i]])[names(SRUC_AdminData[[i]])=="V11"]<<-"Admin_Fee_Total"
+		names(SRUC_AdminData[[i]])[names(SRUC_AdminData[[i]])=="V13"]<<-"Admin_Fee_Total"
 		## Calculates portion of total admin fee that belongs to SRUC and GeoSciences
-		SRUC_AdminData[[i]][,12]<<-(0.75 * SRUC_AdminData[[i]][,11])
-		SRUC_AdminData[[i]][,13]<<-(0.25 * SRUC_AdminData[[i]][,11])
+		SRUC_AdminData[[i]][,14]<<-(0.75 * SRUC_AdminData[[i]][,13])
+		SRUC_AdminData[[i]][,15]<<-(0.25 * SRUC_AdminData[[i]][,13])
 		## Re-Names these columns 
-		names(SRUC_AdminData[[i]])[names(SRUC_AdminData[[i]])=="V12"]<<-"Admin_Fee_SRUC"
-		names(SRUC_AdminData[[i]])[names(SRUC_AdminData[[i]])=="V13"]<<-"Admin_Fee_GeoSciences"
+		names(SRUC_AdminData[[i]])[names(SRUC_AdminData[[i]])=="V14"]<<-"Admin_Fee_SRUC"
+		names(SRUC_AdminData[[i]])[names(SRUC_AdminData[[i]])=="V15"]<<-"Admin_Fee_GeoSciences"
 		
 		## Advances to the next course and repeats above steps until the list of programmes is exhausted
 		i = i+1
@@ -639,8 +639,8 @@ Institutional_Summary <- function() {
 	#Populate GeoSciences portion of summary table
 	while (i <=length(Programmes)) {
 							
-		## Step 1: Determine total moneys owed from GeoSciences to each programme across all elements of the fee
-		Total_teaching_gs <- ProgrammeFinances_TC[[i,"GS"]]
+		## Step 1: Determine total moneys owed from GeoSciences (vs others) to each programme across all elements of the fee
+		Total_teaching_gs <- ProgrammeFinances_TC[[i,"GeoSciences"]]
 		Total_diss_gs <- ProgrammeFinances_SRUCstudent_DS[[i,"SRUC"]]
 		Total_admin_gs <- ProgrammeFinances_Admin[[i, "SRUC"]]
 		Total_gs <- Total_teaching_gs + Total_diss_gs + Total_admin_gs
@@ -681,7 +681,7 @@ Institutional_Summary <- function() {
 		while (j <= length(Research_Groups)) {
 		## Step 1: Determine total moneys owed from GeoSciences to each programme across all elements of the fee
 		Total_teaching_gs <- 0
-		Total_diss_gs <- RGFinances[[j,"GS"]]
+		Total_diss_gs <- RGFinances[[j,"GeoSciences"]]
 		Total_admin_gs <- 0
 		Total_gs <- Total_teaching_gs + Total_diss_gs + Total_admin_gs
 
