@@ -52,35 +52,31 @@ ImportTuitionData <- function() {
 		## Source of this approach is: http://stackoverflow.com/questions/2261079/how-to-trim-leading-and-trailing-whitespace-in-r
 		### Look for sub-comment by Thieme Hennis Sep 19 '14 
 		
-		#????why does next line not work? Trimming is necessary here, but doing it prevents stack from working ??????#
 		
-		# It gives this error: Error in stack.data.frame(TuitionFees[, 3:4]) :  no vector columns were selected
-	
-	#TuitionFees <<- as.data.frame(apply(TuitionFees,2,function (x) sub("\\s+$", "", x)))
-	
-	# First  need to remove last the blank space that is found in the Fees excel sheet in the programme
-	# and school column in order to get the subsequent merge to find any matches by programme
-	TuitionFees$Programme <<- as.character(TuitionFees$Programme)
-	TuitionFees$Programme <<- substr(TuitionFees$Programme, 1, nchar(TuitionFees$Programme)-1)
-	TuitionFees$School <<- as.character(TuitionFees$School )
-	TuitionFees$School <<- substr(TuitionFees$School , 1, nchar(TuitionFees$School)-1)
-
-	#Keep only 1st 5 columns to remove ODL and APC and any other fee info that's not useful
+		#Keep only 1st 5 columns to remove ODL and APC and any other fee info that's not useful
 	TuitionFees <<-	TuitionFees[1:5]
-	#Delete Programme Code column to ensure the stacking function works below
-	TuitionFees <<-	TuitionFees[-2]	
+		
 	# Rename column showing programme name
 	names(TuitionFees)[names(TuitionFees)=="Name.of.Programme"] <<- "Programme"
 	# Put all of the fee related information within one column (this is necessary for later)
-	TuitionFees <<- cbind(TuitionFees[gl(nrow(TuitionFees), 1, 2*nrow(TuitionFees)), 1:2], stack(TuitionFees[,3:4]))
+	textcols <<- TuitionFees[,1:3]
+
+	textcolsws <<- as.data.frame(apply(textcols,c(1,2),function (x) sub("\\s+$", "", x)))
+	allcols <<- cbind(textcolsws, TuitionFees[,4:5])
+
+	TuitionFees_stacked <<- cbind(allcols[gl(nrow(TuitionFees), 1, 2*nrow(allcols)), 1:3], stack(allcols[,4:5]))
+	#Delete Programme Code column to ensure the stacking function works below
+	TuitionFees_stacked <<-	TuitionFees_stacked[-2]
+
 	##Rename the columns from the defaults to what they are to allow merging later
-	names(TuitionFees)[3] <<- "Tuition"
-	names(TuitionFees)[4] <<- "Fee_Status"
+	names(TuitionFees_stacked)[3] <<- "Tuition"
+	names(TuitionFees_stacked)[4] <<- "Fee_Status"
 
 }
 ImportTuitionData()
-TuitionFees[1:10,] #checks function has worked
-#PASTED? Yes
+TuitionFees_stacked[1:10,] #checks function has worked
+as.character(TuitionFees_stacked[1, 2])
+
 					     
 ImportFeeStatusData <- function() {
 
@@ -165,7 +161,7 @@ ImportClassData <- function () {
 }
 
 ImportClassData()
-CourseData
+CourseData[[19]]
 CourseData["FEE"]
 CourseData[20]
 
@@ -226,13 +222,12 @@ MergeClassData_FeeStatus <- function () {
 
 MergeClassData_FeeStatus()
 CourseDataFS
-CourseDataFS[20]
+CourseDataFS[19]
 
-#Ok...so it works fine up to here with the real data (1800 on 7th November 2016). The same process has to be followed
-# as above, and it's not working. Something is different about the programme columns. No idea what. 					 
+
 					  
 MergeClassFeeStatus_TuitionInfo <- function () {
-
+	
 	i = 1
 	CourseDataFSTI <<- vector('list', length(Courses))
 
@@ -240,14 +235,8 @@ MergeClassFeeStatus_TuitionInfo <- function () {
 	## Sets up merger with tuition information
 	while (i <= length(Courses)) {
 		
-		#CourseDataFS[[i]]$Programme <<- as.character(CourseData[[i]]$Programme)
-		#CourseDataFS[[i]]$Fee_Status <<- as.character(CourseData[[i]]$Fee_Status)
-		
-		#TuitionFees$Programme <<- as.character(TuitionFees$Programme)
-		#TuitionFees$Fee_Status <<- as.character(TuitionFees$Fee_Status)
-
 		# Then complete merger	
-		CourseDataFSTI[[i]] <<-merge(CourseDataFS[[i]], TuitionFees[ , c("Tuition", "Programme", "Fee_Status")], by=c("Programme", "Fee_Status"))
+		CourseDataFSTI[[i]] <<-merge(CourseDataFS[[i]], TuitionFees_stacked[ , c("Tuition", "Programme", "Fee_Status")], by=c("Programme", "Fee_Status"))
 		CourseDataFSTI[[i]] <<- CourseDataFSTI[[i]][!duplicated(CourseDataFSTI[[i]]),]
 
 		## Inputs credit weighting for course 
@@ -271,13 +260,12 @@ MergeClassFeeStatus_TuitionInfo <- function () {
 	}
 	
 	names(CourseDataFSTI) <<- Courses
-	write.xlsx(Lost_Student_Check, paste("Outputs/Tests/LostStudentCheck_", yr, ".xlsx", sep="", ), sheetName="Courses", append=TRUE)			 
+	write.xlsx(Lost_Student_Check, paste("Outputs/Tests/LostStudentCheck_", yr, ".xlsx", sep="" ), sheetName="Courses", append=TRUE)			 
 }
 
 MergeClassFeeStatus_TuitionInfo()
-
-					  
-					  
+CourseDataFSTI[[19]]
+	  
 					  
 					  
 					  
