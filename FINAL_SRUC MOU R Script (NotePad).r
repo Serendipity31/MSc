@@ -26,9 +26,6 @@ Research_Groups <- c("LEES", "CropsSoils")
 ImportTuitionData <- function() {
 	#Imports file containing year in which MSc commencses (e.g. 2016 for the 2016-2017 acadmeic year)
 	yr <<- read.xlsx("Inputs/ReferenceInfo/Year_for_Calculation.xlsx", sheetIndex=1, rowIndex=1, colIndex=1, header=FALSE)
-ImportTuitionData <- function() {
-	#Imports file containing year in which MSc commencses (e.g. 2016 for the 2016-2017 acadmeic year)
-	yr <<- read.xlsx("Inputs/ReferenceInfo/Year_for_Calculation.xlsx", sheetIndex=1, rowIndex=1, colIndex=1, header=FALSE)
 
 	#Trim trailing whitespace in case this appears
 		## Source of this approach is: http://stackoverflow.com/questions/2261079/how-to-trim-leading-and-trailing-whitespace-in-r
@@ -51,11 +48,14 @@ ImportTuitionData <- function() {
 	# csv version: TuitionFees <<- as.data.frame(read.csv("Inputs/Fees_2016.csv", header=TRUE, sep=","))
 	TuitionFees <<- read.xlsx("Inputs/ReferenceInfo/Fees_2016.xlsx", sheetIndex=1, header=TRUE, as.data.frame=TRUE)
 	
-	#????why does next line not work? Trimming is necessary here, but doing it prevents stack from working ??????#
-
 	#Trim trailing whitespace that appear to exist in the "Programme" columns (as this inhibits merging later)
 		## Source of this approach is: http://stackoverflow.com/questions/2261079/how-to-trim-leading-and-trailing-whitespace-in-r
 		### Look for sub-comment by Thieme Hennis Sep 19 '14 
+		
+		#????why does next line not work? Trimming is necessary here, but doing it prevents stack from working ??????#
+		
+		# It gives this error: Error in stack.data.frame(TuitionFees[, 3:4]) :  no vector columns were selected
+	
 	#TuitionFees <<- as.data.frame(apply(TuitionFees,2,function (x) sub("\\s+$", "", x)))
 	
 	# First  need to remove last the blank space that is found in the Fees excel sheet in the programme
