@@ -26,6 +26,9 @@ Research_Groups <- c("LEES", "CropsSoils")
 ImportTuitionData <- function() {
 	#Imports file containing year in which MSc commencses (e.g. 2016 for the 2016-2017 acadmeic year)
 	yr <<- read.xlsx("Inputs/ReferenceInfo/Year_for_Calculation.xlsx", sheetIndex=1, rowIndex=1, colIndex=1, header=FALSE)
+ImportTuitionData <- function() {
+	#Imports file containing year in which MSc commencses (e.g. 2016 for the 2016-2017 acadmeic year)
+	yr <<- read.xlsx("Inputs/ReferenceInfo/Year_for_Calculation.xlsx", sheetIndex=1, rowIndex=1, colIndex=1, header=FALSE)
 
 	#Trim trailing whitespace in case this appears
 		## Source of this approach is: http://stackoverflow.com/questions/2261079/how-to-trim-leading-and-trailing-whitespace-in-r
@@ -38,7 +41,7 @@ ImportTuitionData <- function() {
 	#Trim trailing whitespace in case this appears
 		## Source of this approach is: http://stackoverflow.com/questions/2261079/how-to-trim-leading-and-trailing-whitespace-in-r
 		### Look for sub-comment by Thieme Hennis Sep 19 '14 
-	SRUC_Courses <<- as.data.frame(apply(SRUC_Courses,2,function (x) sub("\\s+$", "", x)))
+	#SRUC_Courses <<- as.data.frame(apply(SRUC_Courses,2,function (x) sub("\\s+$", "", x)))
 	
 	Courses <<- SRUC_Courses[,2]
 	Programme_Ownership <<- SRUC_Courses[,3]
@@ -75,10 +78,10 @@ ImportTuitionData <- function() {
 	names(TuitionFees)[4] <<- "Fee_Status"
 
 }
-
 ImportTuitionData()
 TuitionFees[1:10,] #checks function has worked
-	
+#PASTED? Yes
+					     
 ImportFeeStatusData <- function() {
 
 	# Import the datafile showing the fee status determined by admissions for all students in 5 schools (CFUF/UF)
@@ -86,14 +89,14 @@ ImportFeeStatusData <- function() {
 	#Trim trailing whitespace in case this appears
 		## Source of this approach is: http://stackoverflow.com/questions/2261079/how-to-trim-leading-and-trailing-whitespace-in-r
 		### Look for sub-comment by Thieme Hennis Sep 19 '14 
-	FeeStatus <<- as.data.frame(apply(FeeStatus,2,function (x) sub("\\s+$", "", x)))
+	#FeeStatus <<- as.data.frame(apply(FeeStatus,2,function (x) sub("\\s+$", "", x)))
 	FeeStatus <<- FeeStatus[,1:15]
 	#At this point, all the students are in the list, so need to select the subset consisting of all part time students in
 	# these schools, and export them to a file that can be used as the template for next year to ensure no one is missed out.
 	## In 2016, will have to add Sydney Chandler in by hand (as the only one I know who stiched status from FT to PT
 	ptstudents <<- subset(FeeStatus, grepl("/*P$", FeeStatus$Prog, ignore.case=TRUE))
 	#Export this file so that it's ready to go for next year
-	###write.xlsx(ptstudents, paste("Outputs/FutureInputs/PTStudent_from_FeeStatus_", yr, ".xlsx", sep=""))
+	write.xlsx(ptstudents, paste("Outputs/FutureInputs/PTStudent_from_FeeStatus_", yr, ".xlsx", sep=""))
 	# Search for and remove dupliate rows if students 'hang' around in the admissions system for years
 		   #this function should look at all columns to determine uniqueness, and then remove full rows
 		   #http://stats.stackexchange.com/questions/6759/removing-duplicated-rows-data-frame-in-r
@@ -110,11 +113,6 @@ FeeStatus[1:10,] #checks function has worked
 # enable the calculation of course fee owed to each programme per student on the courses (irrespective of PT status or school of
 # origin)
 		
-ImportClassData <- function () {
-	CourseData <<- NULL
-	i = 1
-	Lost_Student_Check <<- data.frame(Courses=character(), Pre_Merge=numeric(), Post_Merge=numeric(), Difference=numeric(), Highlights=character(), Lost_UUNs=character(), stringsAsFactors=FALSE)
-	CourseData <<- vector('list', length(Courses))
 ImportClassData <- function () {
 	CourseData <<- NULL
 	i = 1
@@ -158,11 +156,8 @@ ImportClassData <- function () {
 		CourseData[[i]]$School[grepl("School Of Law", CourseData[[i]]$School, ignore.case=FALSE)] <<- "Law"
 		CourseData[[i]]$School[grepl("Business School", CourseData[[i]]$School, ignore.case=FALSE)] <<- "Business"
 		# remove any rows where there is a PhD student enrolled, as they should not be enrolled
-		#????why does next line not work? ??????#
-		#if (grepl("PhD", CourseData[[i]]$Programme)) {
-		#	CourseData[[i]] <<- CourseData[[i]][!grepl("PhD", CourseData[[i]]$Programme),]
-		#}
-		#else {}
+		CourseData[[i]] <<- CourseData[[i]][!grepl("PhD", CourseData[[i]]$Programme),]
+		
 		i=i+1
 	}
 	
@@ -174,29 +169,6 @@ CourseData
 CourseData["FEE"]
 CourseData[20]
 
-MergeClassData_FeeStatus <- function () {
-
-	i = 1
-			
-	## Sets up merger with fee status data
-	while (i <= length(Courses)) {
-
-		# Need to document the number of MSc students within the course before merging, in case the FeeStatus data
-			#is incomplete
-			Pre_Merge_Length <- length(CourseData[[i]]$UUN)
-			Pre_Merge_UUN <- as.vector(CourseData[[i]]$UUN)
-		
-		## Change case from 'S' to 's' in Fee Status data frame to match with Course Data
-		FeeStatus$UUN <<- sapply(FeeStatus$UUN, tolower)
-		## Merges attendance list with fee status information
-MergeClassData_FeeStatus <- function () {
-
-	i = 1
-			
-	## Sets up merger with fee status data
-	while (i <= length(Courses)) {
-
-		# Need to document the number of MSc students within the course before merging, in case the FeeStatus data
 MergeClassData_FeeStatus <- function () {
 
 	i = 1
@@ -250,12 +222,15 @@ MergeClassData_FeeStatus <- function () {
 	}
 	names(CourseDataFS) <<- Courses
 
-}		
+}	
 
 MergeClassData_FeeStatus()
 CourseDataFS
 CourseDataFS[20]
 
+#Ok...so it works fine up to here with the real data (1800 on 7th November 2016). The same process has to be followed
+# as above, and it's not working. Something is different about the programme columns. No idea what. 					 
+					  
 MergeClassFeeStatus_TuitionInfo <- function () {
 
 	i = 1
@@ -264,7 +239,13 @@ MergeClassFeeStatus_TuitionInfo <- function () {
 			
 	## Sets up merger with tuition information
 	while (i <= length(Courses)) {
-				
+		
+		#CourseDataFS[[i]]$Programme <<- as.character(CourseData[[i]]$Programme)
+		#CourseDataFS[[i]]$Fee_Status <<- as.character(CourseData[[i]]$Fee_Status)
+		
+		#TuitionFees$Programme <<- as.character(TuitionFees$Programme)
+		#TuitionFees$Fee_Status <<- as.character(TuitionFees$Fee_Status)
+
 		# Then complete merger	
 		CourseDataFSTI[[i]] <<-merge(CourseDataFS[[i]], TuitionFees[ , c("Tuition", "Programme", "Fee_Status")], by=c("Programme", "Fee_Status"))
 		CourseDataFSTI[[i]] <<- CourseDataFSTI[[i]][!duplicated(CourseDataFSTI[[i]]),]
@@ -289,7 +270,7 @@ MergeClassFeeStatus_TuitionInfo <- function () {
 		i = i+1
 	}
 	
-	
+	names(CourseDataFSTI) <<- Courses
 	write.xlsx(Lost_Student_Check, paste("Outputs/Tests/LostStudentCheck_", yr, ".xlsx", sep="", ), sheetName="Courses", append=TRUE)			 
 }
 
@@ -309,14 +290,14 @@ Course_Level_Finances <- function() {
 	
 	while (i <= length(Courses)) {
 		#Step 1: Define subsets of dataframes to group students from different schools on each course
-		gs <- subset(CourseData[[i]], School == "GeoSciences")
-		spss <- subset(CourseData[[i]], School == "SPSS")
-		law <- subset(CourseData[[i]], School == "Law")			
-		eng <- subset(CourseData[[i]], School == "Engineering")
-		bus <- subset(CourseData[[i]], School == "Business")
+		gs <- subset(CourseDataFSTI[[i]], School == "GeoSciences")
+		spss <- subset(CourseDataFSTI[[i]], School == "SPSS")
+		law <- subset(CourseDataFSTI[[i]], School == "Law")			
+		eng <- subset(CourseDataFSTI[[i]], School == "Engineering")
+		bus <- subset(CourseDataFSTI[[i]], School == "Business")
 			
 		#Step 2: Determine the tuition associated with each course (in total and by school)
-		Total_All <- sum(CourseData[[i]]$Course_Fee)
+		Total_All <- sum(CourseDataFSTI[[i]]$Course_Fee)
 		Total_gs <- sum(gs$Course_Fee)
 		Total_spss <- sum(spss$Course_Fee)
 		Total_law <- sum(law$Course_Fee)
@@ -399,7 +380,7 @@ SRUC_Prog_DS <- function() {
 		#Trim trailing whitespace in case this appears
 			## Source of this approach is: http://stackoverflow.com/questions/2261079/how-to-trim-leading-and-trailing-whitespace-in-r
 			### Look for sub-comment by Thieme Hennis Sep 19 '14 
-			SRUC_Student_DS[[i]] <<- as.data.frame(apply(SRUC_Student_DS[[i]],2,function (x) sub("\\s+$", "", x)))
+			#SRUC_Student_DS[[i]] <<- as.data.frame(apply(SRUC_Student_DS[[i]],2,function (x) sub("\\s+$", "", x)))
 		
 		
 		# Need to document the number of MSc students within the course before merging, in case the FeeStatus data
