@@ -22,7 +22,8 @@ Research_Groups <- c("LEES", "CropsSoils")
 ###PART 2: Calculations related to teaching
 
 # Step 1: Import data reference data (e.g. year, course names, tuition fee schedule, and fee status data)
-ImportReferenceData <- function() {
+
+ImportTuitionData <- function() {
 	#Imports file containing year in which MSc commencses (e.g. 2016 for the 2016-2017 acadmeic year)
 	yr <<- read.xlsx("Inputs/ReferenceInfo/Year_for_Calculation.xlsx", sheetIndex=1, rowIndex=1, colIndex=1, header=FALSE)
 
@@ -46,23 +47,40 @@ ImportReferenceData <- function() {
 	# Import file as data frame showing all programmes, School, Home Fees (FT), Overseas Fees (FT)
 	# csv version: TuitionFees <<- as.data.frame(read.csv("Inputs/Fees_2016.csv", header=TRUE, sep=","))
 	TuitionFees <<- read.xlsx("Inputs/ReferenceInfo/Fees_2016.xlsx", sheetIndex=1, header=TRUE, as.data.frame=TRUE)
+	
+	#????why does next line not work? Trimming is necessary here, but doing it prevents stack from working ??????#
+
 	#Trim trailing whitespace that appear to exist in the "Programme" columns (as this inhibits merging later)
 		## Source of this approach is: http://stackoverflow.com/questions/2261079/how-to-trim-leading-and-trailing-whitespace-in-r
 		### Look for sub-comment by Thieme Hennis Sep 19 '14 
-	#####PROBLEM!!## FOR SOME REASON THEL INE BELOW CAUSES THE STACK FUNCTION TO FAIL
 	#TuitionFees <<- as.data.frame(apply(TuitionFees,2,function (x) sub("\\s+$", "", x)))
+	
+	# First  need to remove last the blank space that is found in the Fees excel sheet in the programme
+	# and school column in order to get the subsequent merge to find any matches by programme
+	TuitionFees$Programme <<- as.character(TuitionFees$Programme)
+	TuitionFees$Programme <<- substr(TuitionFees$Programme, 1, nchar(TuitionFees$Programme)-1)
+	TuitionFees$School <<- as.character(TuitionFees$School )
+	TuitionFees$School <<- substr(TuitionFees$School , 1, nchar(TuitionFees$School)-1)
+
 	#Keep only 1st 5 columns to remove ODL and APC and any other fee info that's not useful
 	TuitionFees <<-	TuitionFees[1:5]
 	#Delete Programme Code column to ensure the stacking function works below
 	TuitionFees <<-	TuitionFees[-2]	
 	# Rename column showing programme name
-	names(TuitionFees)[names(TuitionFees)=="Name.of.Programme"] <- "Programme"
+	names(TuitionFees)[names(TuitionFees)=="Name.of.Programme"] <<- "Programme"
 	# Put all of the fee related information within one column (this is necessary for later)
 	TuitionFees <<- cbind(TuitionFees[gl(nrow(TuitionFees), 1, 2*nrow(TuitionFees)), 1:2], stack(TuitionFees[,3:4]))
 	##Rename the columns from the defaults to what they are to allow merging later
-	names(TuitionFees)[names(TuitionFees)=="ind"] <- "Fee_Status"
-	names(TuitionFees)[names(TuitionFees)=="values"] <- "Tuition"
+	names(TuitionFees)[3] <<- "Tuition"
+	names(TuitionFees)[4] <<- "Fee_Status"
+
+}
+
+ImportTuitionData()
+TuitionFees[1:10,] #checks function has worked
 	
+ImportFeeStatusData <- function() {
+
 	# Import the datafile showing the fee status determined by admissions for all students in 5 schools (CFUF/UF)
 	FeeStatus <<- read.xlsx("Inputs/ReferenceInfo/FeeStatus_2016.xlsx", sheetIndex=1, header=TRUE, as.data.frame=TRUE)
 	#Trim trailing whitespace in case this appears
@@ -73,38 +91,47 @@ ImportReferenceData <- function() {
 	#At this point, all the students are in the list, so need to select the subset consisting of all part time students in
 	# these schools, and export them to a file that can be used as the template for next year to ensure no one is missed out.
 	## In 2016, will have to add Sydney Chandler in by hand (as the only one I know who stiched status from FT to PT
-	ptstudents <- subset(FeeStatus, grepl("/*P$", FeeStatus$Prog, ignore.case=TRUE))
-	#####PROBLEM!!## FOR SOME REASON THE EXPORT FAILS
+	ptstudents <<- subset(FeeStatus, grepl("/*P$", FeeStatus$Prog, ignore.case=TRUE))
 	#Export this file so that it's ready to go for next year
-	write.xlsx(ptstudents, paste("Outputs/FutureInputs/PTStudent_from_FeeStatus_", yr, ".xlsx", sep="")
+	###write.xlsx(ptstudents, paste("Outputs/FutureInputs/PTStudent_from_FeeStatus_", yr, ".xlsx", sep=""))
 	# Search for and remove dupliate rows if students 'hang' around in the admissions system for years
 		   #this function should look at all columns to determine uniqueness, and then remove full rows
 		   #http://stats.stackexchange.com/questions/6759/removing-duplicated-rows-data-frame-in-r
-	FeeStatus <- FeeStatus[!duplicated(FeeStatus),]	   
+	FeeStatus <<- FeeStatus[!duplicated(FeeStatus),]	   
 	# convert UUN column within FeeStatus to character to match with CourseData column
-	FeeStatus$UUN <- as.character(FeeStatus$UUN)
+	FeeStatus$UUN <<- as.character(FeeStatus$UUN)
 }
+
+ImportFeeStatusData()
+FeeStatus[1:10,] #checks function has worked
+	
 
 # Step 2: Iteratively import attendance lists, rearrange them, and merge with fee status,  tuition fee, and credit information to 
 # enable the calculation of course fee owed to each programme per student on the courses (irrespective of PT status or school of
 # origin)
-ImportData <- function () {
-	# Step 4: Import attendance lists for all courses, merge with fee status info and fee info, 
-	# and calculate fee fraction for each student on each course
+		
+ImportClassData <- function () {
+	CourseData <<- NULL
 	i = 1
-	Lost_Student_Check <- data.frame(Course=character(), Pre_Merge=numeric(), Post_Merge=numeric(), Difference=numeric(), Highlights=character(), Lost_UUNs=character(), stringsAsFactors=FALSE)
+	Lost_Student_Check <<- data.frame(Courses=character(), Pre_Merge=numeric(), Post_Merge=numeric(), Difference=numeric(), Highlights=character(), Lost_UUNs=character(), stringsAsFactors=FALSE)
+	CourseData <<- vector('list', length(Courses))
+ImportClassData <- function () {
+	CourseData <<- NULL
+	i = 1
+	Lost_Student_Check <<- data.frame(Courses=character(), Pre_Merge=numeric(), Post_Merge=numeric(), Difference=numeric(), Highlights=character(), Lost_UUNs=character(), stringsAsFactors=FALSE)
 	CourseData <<- vector('list', length(Courses))
 		
 	## Imports attendance list
 	while (i <= length(Courses)) {
 		## Imports attendance list
-		fn <- paste("Inputs/Classes/", Courses[i], "_CLASS_LIST_", yr, ".xlsx", sep=" ")
-		#Trim trailing whitespace in case this appears
+		fn <- paste("Inputs/Classes/", Courses[i], "_CLASS_LIST_", yr, ".xlsx", sep="")
+		## Creates dataframe associated with course that holds position i in Courses
+		CourseData[[i]] <<-read.xlsx(fn, sheetIndex=1, header=TRUE, as.data.frame=TRUE)		
+			#Trim trailing whitespace in case this appears
 			## Source of this approach is: http://stackoverflow.com/questions/2261079/how-to-trim-leading-and-trailing-whitespace-in-r
 			### Look for sub-comment by Thieme Hennis Sep 19 '14 
-		fn <<- as.data.frame(apply(fn,2,function (x) sub("\\s+$", "", x)))
-		## Creates dataframe associated with course that holds position i in Courses
-		CourseData[[i]] <<-read.xlsx(fn, sheetIndex=1, header=TRUE, as.data.frame=TRUE)
+		#CourseData[[i]]<<- as.data.frame(apply(CourseData[[i]],2,function (x) sub("\\s+$", "", x)))
+		
 		## renames columns...not sure if need as [,1] or [1]...test at work was just [1] on R.3.3.2
 		names(CourseData[[i]])[1]<<-"UUN"
 		names(CourseData[[i]])[2]<<-"Surname"
@@ -119,34 +146,83 @@ ImportData <- function () {
 		# Need to remove last 2 characters from UUN column
 		CourseData[[i]]$UUN <<- as.character(CourseData[[i]]$UUN)
 		CourseData[[i]]$UUN <<- substr(CourseData[[i]]$UUN, 1, nchar(CourseData[[i]]$UUN)-2)
+		CourseData[[i]]$UUN <<- as.character(CourseData[[i]]$UUN)
 		# replace school names used by default in attendance list with ones matching the what I want as table headers 
 			### Note: if need to match Fee Status sheet spellings, the only one to change is SPSS to "Social & Political Science"
 		# used this tip: http://stackoverflow.com/questions/22418864/r-replace-entire-strings-based-on-partial-match
 		# Need to specify column and/or change it to character from factor to get to work...
-		CourseData[[i]]$School <- as.character(CourseData[[i]]$School)
+		CourseData[[i]]$School <<- as.character(CourseData[[i]]$School)
 		CourseData[[i]]$School[grepl("School Of Geosciences", CourseData[[i]]$School, ignore.case=FALSE)] <<- "GeoSciences"
-		CourseData[[i]]$School[grepl("School Of Social And Political Science", CourseData[[i]], ignore.case=FALSE)] <<- "SPSS"
+		CourseData[[i]]$School[grepl("School Of Social And Political Science", CourseData[[i]]$School, ignore.case=FALSE)] <<- "SPSS"
 		CourseData[[i]]$School[grepl("School Of Engineering", CourseData[[i]]$School, ignore.case=FALSE)] <<- "Engineering"
 		CourseData[[i]]$School[grepl("School Of Law", CourseData[[i]]$School, ignore.case=FALSE)] <<- "Law"
 		CourseData[[i]]$School[grepl("Business School", CourseData[[i]]$School, ignore.case=FALSE)] <<- "Business"
 		# remove any rows where there is a PhD student enrolled, as they should not be enrolled
-		CourseData[[i]] <<-CourseData[[i]][!grepl("PhD", CourseData[[i]]$Programme),]
-		# Don't have to remove auditing students at this point if prep work has done...
-		# Ready to proceed to merging files...
+		#????why does next line not work? ??????#
+		#if (grepl("PhD", CourseData[[i]]$Programme)) {
+		#	CourseData[[i]] <<- CourseData[[i]][!grepl("PhD", CourseData[[i]]$Programme),]
+		#}
+		#else {}
+		i=i+1
+	}
+	
+	names(CourseData) <<- Courses
+}
+
+ImportClassData()
+CourseData
+CourseData["FEE"]
+CourseData[20]
+
+MergeClassData_FeeStatus <- function () {
+
+	i = 1
+			
+	## Sets up merger with fee status data
+	while (i <= length(Courses)) {
+
 		# Need to document the number of MSc students within the course before merging, in case the FeeStatus data
 			#is incomplete
 			Pre_Merge_Length <- length(CourseData[[i]]$UUN)
 			Pre_Merge_UUN <- as.vector(CourseData[[i]]$UUN)
+		
+		## Change case from 'S' to 's' in Fee Status data frame to match with Course Data
+		FeeStatus$UUN <<- sapply(FeeStatus$UUN, tolower)
 		## Merges attendance list with fee status information
-		CourseData[[i]] <<-merge(CourseData[[i]], FeeStatus[ , c("UUN", "FSG")], by=c("UUN"))
+MergeClassData_FeeStatus <- function () {
+
+	i = 1
+			
+	## Sets up merger with fee status data
+	while (i <= length(Courses)) {
+
+		# Need to document the number of MSc students within the course before merging, in case the FeeStatus data
+MergeClassData_FeeStatus <- function () {
+
+	i = 1
+	CourseDataFS <<- vector('list', length(Courses))
+			
+	## Sets up merger with fee status data
+	while (i <= length(Courses)) {
+
+		# Need to document the number of MSc students within the course before merging, in case the FeeStatus data
+			#is incomplete
+			Pre_Merge_Length <- length(CourseData[[i]]$UUN)
+			Pre_Merge_UUN <- as.vector(CourseData[[i]]$UUN)
+		
+		## Change case from 'S' to 's' in Fee Status data frame to match with Course Data
+		FeeStatus$UUN <<- sapply(FeeStatus$UUN, tolower)
+		## Merges attendance list with fee status information
+		CourseDataFS[[i]] <<-merge(CourseData[[i]], FeeStatus[ , c("UUN", "FSG")], by=c("UUN"))
+		CourseDataFS[[i]] <<- CourseDataFS[[i]][!duplicated(CourseDataFS[[i]]),]
 		# Need to now check if any students no longer appear in the data frame. If they don't appear it is because
 			# they weren't in the Fee Status sheet...and the most likely explanation for that is they are pursuing their
 			# studies for longer than initially anticipated (e.g. have had an interruption or concession to change status)
 			# If this happens, this should print a warning to prompt us to go back and find the missing student data and
 			# add it into the FeeStatus sheet if appropriate (i.e. unless they have already paid all their tuition AND we
 			# have already been paid for it, and it's just the delay in them actually participating in whichever course
-			Post_Merge_Length <- length(CourseData[[i]]$UUN)
-			Post_Merge_UUN <- as.vector(CourseData[[i]]$UUN)
+			Post_Merge_Length <- length(CourseDataFS[[i]]$UUN)
+			Post_Merge_UUN <- as.vector(CourseDataFS[[i]]$UUN)
 			Diff <- Post_Merge_Length - Pre_Merge_Length
 			
 			if (Diff <0) {
@@ -164,58 +240,66 @@ ImportData <- function () {
 			
 			#For reference on listing lost UUNs in final column: 
 			# http://stackoverflow.com/questions/13973116/convert-r-vector-to-string-vector-of-1-element
-			Lost_Student_Check[i,] <- c(Courses[i], Pre_Merge_Length, Post_Merge_Length, abs(Diff), Highlights, paste(OnlyInPreMerge, collapse=", "))			   
+			Lost_Student_Check[i,] <<- c(Courses[i], Pre_Merge_Length, Post_Merge_Length, abs(Diff), Highlights, paste(OnlyInPreMerge, collapse=", "))			   
 					   
 		# Rename FSG column to be "Fee_Status"
-		names(CourseData[[i]])[8]<<-"Fee_Status"
+		names(CourseDataFS[[i]])[8]<<-"Fee_Status"
 		# Change any entry with RUK or SEU as the Fee Status Group to H (thus everything is O or H) 
-		CourseData[[i]]$Fee_Status[grepl("RUK|SEU", CourseData[[i]]$Fee_Status, ignore.case=FALSE)] <<- "H"
-		## Merges attendance list with fee information
+		CourseDataFS[[i]]$Fee_Status[grepl("RUK|SEU", CourseDataFS[[i]]$Fee_Status, ignore.case=FALSE)] <<- "H"
+		i=i+1
+	}
+	names(CourseDataFS) <<- Courses
+
+}		
+
+MergeClassData_FeeStatus()
+CourseDataFS
+CourseDataFS[20]
+
+MergeClassFeeStatus_TuitionInfo <- function () {
+
+	i = 1
+	CourseDataFSTI <<- vector('list', length(Courses))
+
+			
+	## Sets up merger with tuition information
+	while (i <= length(Courses)) {
 				
-			# First  need to remove last the blank space that is found in the Fees excel sheet in the programme
-			# and school column in order to get the subsequent merge to find any matches by programme
-			###TuitionFees$Programme <- as.character(TuitionFees$Programme)
-			###TuitionFees$Programme <- substr(TuitionFees$Programme, 1, nchar(TuitionFees$Programme)-1)
-			###TuitionFees$School <- as.character(TuitionFees$School )
-			###TuitionFees$School <- substr(TuitionFees$School , 1, nchar(TuitionFees$School)-1)
 		# Then complete merger	
-		CourseData[[i]] <<-merge(CourseData[[i]], TuitionFees[ , c("Tuition", "Programme", "Fee_Status")], by=c("Programme", "Fee_Status"))
+		CourseDataFSTI[[i]] <<-merge(CourseDataFS[[i]], TuitionFees[ , c("Tuition", "Programme", "Fee_Status")], by=c("Programme", "Fee_Status"))
+		CourseDataFSTI[[i]] <<- CourseDataFSTI[[i]][!duplicated(CourseDataFSTI[[i]]),]
+
 		## Inputs credit weighting for course 
-		CourseData[[i]][,10]<<-(Credit_Weighting[[i]])
+		CourseDataFSTI[[i]][,10]<<-(Credit_Weighting[[i]])
 		## Names this column
-		names(CourseData[[i]])[names(CourseData[[i]])=="V10"]<<-"Credit_Weighting"
+		names(CourseDataFSTI[[i]])[names(CourseDataFSTI[[i]])=="V10"]<<-"Credit_Weighting"
 		## Re-orders attendance list with fee information so it's easier to read
-		CourseData[[i]] <<-CourseData[[i]][c("UUN", "Surname", "Forename", "Programme", "School", "Matriculation", "Enrollment", "Fee_Status", "Tuition", "Credit_Weighting")]
+		CourseDataFSTI[[i]] <<-CourseDataFSTI[[i]][c("UUN", "Surname", "Forename", "Programme", "School", "Matriculation", "Enrollment", "Fee_Status", "Tuition", "Credit_Weighting")]
 		## Calculates portion of total fee associated with each student on the course
 		## Builds the Course_Fee column based on whether a student is one of the 2 part time options
 		##  or everyone else (i.e. all the ft options). The % charged are increased to ensure the absolute 
 		## quantity paid for each course is the same as a ft student
-		CourseData[[i]]$Course_Fee <<- ifelse(grepl("3 Years", CourseData[[i]]$Programme, ignore.case=TRUE), 
-							0.15 * CourseData[[i]]$Tuition * CourseData[[i]]$Credit_Weighting, 
-						ifelse(grepl("2 Years", CourseData[[i]]$Programme, ignore.case=TRUE), 
-						       0.10 * CourseData[[i]]$Tuition * CourseData[[i]]$Credit_Weighting, 
-						       0.05 * CourseData[[i]]$Tuition * CourseData[[i]]$Credit_Weighting)
+		CourseDataFSTI[[i]]$Course_Fee <<- ifelse(grepl("3 Years", CourseDataFSTI[[i]]$Programme, ignore.case=TRUE), 
+							0.15 * CourseDataFSTI[[i]]$Tuition * as.numeric(as.character(CourseDataFSTI[[i]]$Credit_Weighting)), 
+						ifelse(grepl("2 Years", CourseDataFSTI[[i]]$Programme, ignore.case=TRUE), 
+						       0.10 * CourseDataFSTI[[i]]$Tuition * as.numeric(as.character(CourseDataFSTI[[i]]$Credit_Weighting)), 
+						       0.05 * CourseDataFSTI[[i]]$Tuition * as.numeric(as.character(CourseDataFSTI[[i]]$Credit_Weighting))))
 		
-		## Advances to the next course and repeats above steps until the list of courses is exhausted
+		#Advances to the next course and repeats above steps until the list of courses is exhausted
 		i = i+1
 	}
 	
-	names(CourseData) <<- Courses
+	
 	write.xlsx(Lost_Student_Check, paste("Outputs/Tests/LostStudentCheck_", yr, ".xlsx", sep="", ), sheetName="Courses", append=TRUE)			 
 }
 
-#To execute:
-ImportData()
+MergeClassFeeStatus_TuitionInfo()
 
-#To Check inputs worked
-TuitionFees
-CourseData["FEE"]
-FEE <- CourseData[[1]]
-CourseData[[2]]
-CourseData[[3]]
-CourseData[[4]]
-CourseData[[5]]
-
+					  
+					  
+					  
+					  
+					  
 #Step 2: Income associated with teaching individual courses
 Course_Level_Finances <- function() {
 	
