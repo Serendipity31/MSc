@@ -24,7 +24,7 @@ Research_Groups <- c("LEES", "CropsSoils")
 # Step 1: Import data reference data (e.g. year, course names, tuition fee schedule, and fee status data)
 ImportReferenceData <- function() {
 	#Imports file containing year in which MSc commencses (e.g. 2016 for the 2016-2017 acadmeic year)
-	yr <<- read.xlsx(yr, "_", yr+1, "/Inputs/ReferenceInfo/Year_for_Calculation.xlsx", sheetIndex=1, rowIndex=1, colIndex=1, header=FALSE)
+	yr <<- read.xlsx("Inputs/ReferenceInfo/Year_for_Calculation.xlsx", sheetIndex=1, rowIndex=1, colIndex=1, header=FALSE)
 
 	#Trim trailing whitespace in case this appears
 		## Source of this approach is: http://stackoverflow.com/questions/2261079/how-to-trim-leading-and-trailing-whitespace-in-r
@@ -49,7 +49,8 @@ ImportReferenceData <- function() {
 	#Trim trailing whitespace that appear to exist in the "Programme" columns (as this inhibits merging later)
 		## Source of this approach is: http://stackoverflow.com/questions/2261079/how-to-trim-leading-and-trailing-whitespace-in-r
 		### Look for sub-comment by Thieme Hennis Sep 19 '14 
-	TuitionFees <<- as.data.frame(apply(TuitionFees,2,function (x) sub("\\s+$", "", x)))
+	#####PROBLEM!!## FOR SOME REASON THEL INE BELOW CAUSES THE STACK FUNCTION TO FAIL
+	#TuitionFees <<- as.data.frame(apply(TuitionFees,2,function (x) sub("\\s+$", "", x)))
 	#Keep only 1st 5 columns to remove ODL and APC and any other fee info that's not useful
 	TuitionFees <<-	TuitionFees[1:5]
 	#Delete Programme Code column to ensure the stacking function works below
@@ -73,6 +74,7 @@ ImportReferenceData <- function() {
 	# these schools, and export them to a file that can be used as the template for next year to ensure no one is missed out.
 	## In 2016, will have to add Sydney Chandler in by hand (as the only one I know who stiched status from FT to PT
 	ptstudents <- subset(FeeStatus, grepl("/*P$", FeeStatus$Prog, ignore.case=TRUE))
+	#####PROBLEM!!## FOR SOME REASON THE EXPORT FAILS
 	#Export this file so that it's ready to go for next year
 	write.xlsx(ptstudents, paste("Outputs/FutureInputs/PTStudent_from_FeeStatus_", yr, ".xlsx", sep="")
 	# Search for and remove dupliate rows if students 'hang' around in the admissions system for years
@@ -90,7 +92,7 @@ ImportData <- function () {
 	# Step 4: Import attendance lists for all courses, merge with fee status info and fee info, 
 	# and calculate fee fraction for each student on each course
 	i = 1
-	Lost_Student_Check <- data.frame(Course, Pre_Merge=numeric(), Post_Merge=numeric(), Difference=numeric(), Highlights=character(), Lost_UUNs=character(), stringsAsFactors=FALSE)
+	Lost_Student_Check <- data.frame(Course=character(), Pre_Merge=numeric(), Post_Merge=numeric(), Difference=numeric(), Highlights=character(), Lost_UUNs=character(), stringsAsFactors=FALSE)
 	CourseData <<- vector('list', length(Courses))
 		
 	## Imports attendance list
