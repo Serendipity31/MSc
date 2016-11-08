@@ -289,6 +289,8 @@ Course_Level_Finances <- function() {
 		Total_bus <- sum(bus$Course_Fee)
 		
 		CourseFinances[i,] <<- list(Total_All, Total_gs,Total_spss, Total_law, Total_eng, Total_bus)
+		#row.names(CourseFinances)[i] <<- CourseFinances[i]
+
 			
 		## Advances to the next course and repeats above steps until the list of courses is exhausted
 		i = i+1
