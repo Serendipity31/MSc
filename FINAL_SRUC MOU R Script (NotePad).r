@@ -121,10 +121,6 @@ ImportClassData <- function () {
 		fn <- paste("Inputs/Classes/", Courses[i], "_CLASS_LIST_", yr, ".xlsx", sep="")
 		## Creates dataframe associated with course that holds position i in Courses
 		CourseData[[i]] <<-read.xlsx(fn, sheetIndex=1, header=TRUE, as.data.frame=TRUE)		
-			#Trim trailing whitespace in case this appears
-			## Source of this approach is: http://stackoverflow.com/questions/2261079/how-to-trim-leading-and-trailing-whitespace-in-r
-			### Look for sub-comment by Thieme Hennis Sep 19 '14 
-		#CourseData[[i]]<<- as.data.frame(apply(CourseData[[i]],2,function (x) sub("\\s+$", "", x)))
 		
 		## renames columns...not sure if need as [,1] or [1]...test at work was just [1] on R.3.3.2
 		names(CourseData[[i]])[1]<<-"UUN"
@@ -267,7 +263,7 @@ MergeClassFeeStatus_TuitionInfo()
 CourseDataFSTI[[19]]
 	  
 					  
-					  
+#######################Start HERE###################					  
 					  
 #Step 2: Income associated with teaching individual courses
 Course_Level_Finances <- function() {
@@ -293,12 +289,11 @@ Course_Level_Finances <- function() {
 		Total_bus <- sum(bus$Course_Fee)
 		
 		CourseFinances[i,] <<- list(Total_All, Total_gs,Total_spss, Total_law, Total_eng, Total_bus)
-		row.names(CourseFinances)[i] <<- Courses[i]
-		
+			
 		## Advances to the next course and repeats above steps until the list of courses is exhausted
 		i = i+1
 	}
-	CourseFinances <<- data.frame( Programme_Ownership, CourseFinances)
+	CourseFinances <<- data.frame( Courses, Programme_Ownership, CourseFinances)
 }
 
 #To Check inputs worked
@@ -311,17 +306,18 @@ Programme_Level_Finances_Teaching <- function() {
 	i = 1
 	
 	#Creates subsets of CourseFinances to match the courses owned by individual programmes
-	ProgrammeData_TC <<- vector('list', length(Courses))
+	ProgrammeData_TC <<- vector('list', length(Programmes))
+	
 	while(i <= length(Programmes)) {
 		#Step 1: Define subsets of dataframes to group students from different schools on each course
-		ProgrammeData_TC[[i]] <<- subset(CourseFinances, Programme_Ownership == Programmes[[i]])
+		ProgrammeData_TC[[i]] <<- subset(CourseFinances, Programme_Ownership == as.character(Programmes[[i]]))
 			
 		## Advances to the next course and repeats above steps until the list of courses is exhausted
 		i = i+1
 	}
 	#Allows one to call summary finance table by programme name
 	names(ProgrammeData_TC) <<- Programmes
-	
+
 	#Creates a summary table of programme finances
 	j=1
 	ProgrammeFinances_TC <<- data.frame(All=numeric(), GeoSciences=numeric(), SPSS=numeric(), Law=numeric(), Engineering=numeric(),Business=numeric(), stringsAsFactors=FALSE)
@@ -347,44 +343,46 @@ Programme_Level_Finances_Teaching <- function() {
 Programme_Level_Finances_Teaching()
 ProgrammeData_TC
 ProgrammeFinances_TC		
-EE_Dissertations2016
-
-		
+				   		
 ###PART 3: Calculations related to dissertation supervision
 	
 #Step 1: Calculate and apportion income for SRUC students associated with dissertation supervision. 
 # The data files must include PT students for each year they are paying fees, as an equal % is taken each year
+
 SRUC_Prog_DS <- function() {
 
 	i = 1
-	Lost_Student_Check <- data.frame(Programme, Pre_Merge=numeric(), Post_Merge=numeric(), Difference=numeric(), Highlights=character(), Lost_UUNs=character(), stringsAsFactors=FALSE)
+	Lost_Student_Check <- data.frame(Programme=character(), Pre_Merge=numeric(), Post_Merge=numeric(), Difference=numeric(), Highlights=character(), Lost_UUNs=character(), stringsAsFactors=FALSE)
 	SRUC_Student_DS <<- vector('list', length(Programmes))
+	SRUC_Student_DSFS <<- vector('list', length(Programmes))
+	SRUC_Student_DSFSTI <<- vector('list', length(Programmes))
 		
 	while (i <= length(Programmes)) {
 		## Imports xlsx file for each SRUC programme showing supervision details
-		fn <- paste("Inputs/", Programmes[i], "_Dissertations", yr, ".xlsx", sep="")
+		fn <- paste("Inputs/Dissertations/", Programmes[i], "_Dissertations", yr, ".xlsx", sep="")
 		## Creates dataframe associated with course that holds position i in Courses
-		SRUC_Student_DS[[i]]<<- read.xlsx(fn, header=TRUE, as.data.frame=TRUE)
-		#Trim trailing whitespace in case this appears
-			## Source of this approach is: http://stackoverflow.com/questions/2261079/how-to-trim-leading-and-trailing-whitespace-in-r
-			### Look for sub-comment by Thieme Hennis Sep 19 '14 
-			#SRUC_Student_DS[[i]] <<- as.data.frame(apply(SRUC_Student_DS[[i]],2,function (x) sub("\\s+$", "", x)))
+		SRUC_Student_DS[[i]]<<- read.xlsx(fn, header=TRUE, sheetIndex=1,as.data.frame=TRUE)
 		
-		
+		# Remove trailing numbers from UUNs
+		SRUC_Student_DS[[i]]$UUN <<- as.character(SRUC_Student_DS[[i]]$UUN)
+		SRUC_Student_DS[[i]]$UUN <<- substr(SRUC_Student_DS[[i]]$UUN, 1, nchar(SRUC_Student_DS[[i]]$UUN)-2)
+		SRUC_Student_DS[[i]]$UUN <<- as.character(SRUC_Student_DS[[i]]$UUN)
+
 		# Need to document the number of MSc students within the course before merging, in case the FeeStatus data
 			#is incomplete
 			Pre_Merge_Length <- length(SRUC_Student_DS[[i]]$UUN)
 			Pre_Merge_UUN <- as.vector(SRUC_Student_DS[[i]]$UUN)
+		
 		## Merges attendance list with fee status information
-		SRUC_Student_DS[[i]] <<-merge(SRUC_Student_DS[[i]], FeeStatus[ , c("UUN", "FSG")], by=c("UUN"))
+		SRUC_Student_DSFS[[i]] <<-merge(SRUC_Student_DS[[i]], FeeStatus[ , c("UUN", "FSG")], by=c("UUN"))
 		# Need to now check if any students no longer appear in the data frame. If they don't appear it is because
 			# they weren't in the Fee Status sheet...and the most likely explanation for that is they are pursuing their
 			# studies for longer than initially anticipated (e.g. have had an interruption or concession to change status)
 			# If this happens, this should print a warning to prompt us to go back and find the missing student data and
 			# add it into the FeeStatus sheet if appropriate (i.e. unless they have already paid all their tuition AND we
 			# have already been paid for it, and it's just the delay in them actually participating in whichever course
-			Post_Merge_Length <- length(SRUC_Student_DS[[i]]$UUN)
-			Post_Merge_UUN <- as.vector(SRUC_Student_DS[[i]]$UUN)
+			Post_Merge_Length <- length(SRUC_Student_DSFS[[i]]$UUN)
+			Post_Merge_UUN <- as.vector(SRUC_Student_DSFS[[i]]$UUN)
 			Diff <- Post_Merge_Length - Pre_Merge_Length
 			
 			if (Diff <0) {
@@ -405,24 +403,27 @@ SRUC_Prog_DS <- function() {
 			Lost_Student_Check[i,] <- c(Programmes[i], Pre_Merge_Length, Post_Merge_Length, abs(Diff), Highlights, paste(OnlyInPreMerge, collapse=", "))			   
 					   
 		# Rename FSG column to be "Fee_Status"
-		names(SRUC_Student_DS[[i]])[names(SRUC_Student_DS[[i]])=="FSG"] <<-"Fee_Status"
+		names(SRUC_Student_DSFS[[i]])[names(SRUC_Student_DSFS[[i]])=="FSG"] <<-"Fee_Status"
+		
 		# Change any entry with RUK or SEU as the Fee Status Group to H (thus everything is O or H) 
-		SRUC_Student_DS[[i]]$Fee_Status[grepl("RUK|SEU", SRUC_Student_DS[[i]]$Fee_Status, ignore.case=FALSE)] <<- "H"
+		SRUC_Student_DSFS[[i]]$Fee_Status[grepl("RUK|SEU", SRUC_Student_DSFS[[i]]$Fee_Status, ignore.case=FALSE)] <<- "H"
+		
+		
 		## Merges supervision list with fee information
-		SRUC_Student_DS[[i]]<<-merge(SRUC_Student_DS[[i]], TuitionFees[ , c("Tuition", "Programme", "Fee_Status")], by=c("Programme", "Fee_Status"))
+		SRUC_Student_DSFSTI[[i]]<<-merge(SRUC_Student_DSFS[[i]], TuitionFees_stacked[ , c("Tuition", "Programme", "Fee_Status")], by=c("Programme", "Fee_Status"))
 		## Re-orders supervision list with fee information so it's easier to read
-		SRUC_Student_DS[[i]]<<-SRUC_Student_DS[[i]][c("UUN", "Surname", "Forename", "Programme", "Matriculation", "Enrollment", "School", "Supervisor", "Organisation", "Detail", "Fee_Status", "Tuition")]
+		SRUC_Student_DSFSTI[[i]]<<-SRUC_Student_DSFSTI[[i]][c("UUN", "Surname", "Forename", "Programme", "Matriculation", "Enrollment", "School", "Supervisor", "Organisation", "Detail", "Fee_Status", "Tuition")]
 		## Calculates portion of total fee associated with each student's supervision
-		SRUC_Student_DS[[i]][,13]<<-(0.10 * SRUC_Student_DS[[i]][,12])
+		SRUC_Student_DSFSTI[[i]][,13]<<-(0.10 * SRUC_Student_DSFSTI[[i]][,12])
 		## Names this column to highlight the fee portion due to each student on the programme for supervision
-		names(SRUC_Student_DS[[i]])[names(SRUC_Student_DS[[i]])=="V13"]<<-"Supervision_Fee"
+		names(SRUC_Student_DSFSTI[[i]])[names(SRUC_Student_DSFSTI[[i]])=="V13"]<<-"Supervision_Fee"
 		
 		## Advances to the next course and repeats above steps until the list of programmes is exhausted
 		i = i+1
 	}
 	
-	names(SRUC_Student_DS) <<- Programmes
-	write.xlsx(Lost_Student_Check, paste("Outputs/Tests/LostStudentCheck_", yr, ".xlsx", sep="", ), sheetName="IntStudDS", append=TRUE)							     
+	names(SRUC_Student_DSFSTI) <<- Programmes
+								     
 	
 	# Calculates allocation of disertation supervision funds for SRUC students
 	j = 1
@@ -431,11 +432,11 @@ SRUC_Prog_DS <- function() {
 	
 	while (j <= length(Programmes)) {
 		#Step 1: Define subsets of dataframes to group students from different schools on each course
-		sruc <- subset(SRUC_Student_DS[[j]], Organisation == "SRUC")
-		gs <- subset(SRUC_Student_DS[[j]], Organisation == "University")
+		sruc <- subset(SRUC_Student_DSFSTI[[j]], Organisation == "SRUC")
+		gs <- subset(SRUC_Student_DSFSTI[[j]], Organisation == "University")
 					
 		#Step 2: Determine the tuition associated with each course (in total and by school)
-		Total_All <- sum(SRUC_Student_DS[[j]]$Supervision_Fee)
+		Total_All <- sum(SRUC_Student_DSFSTI[[j]]$Supervision_Fee)
 		Total_sruc <- sum(sruc$Supervision_Fee)
 		Total_gs <- sum(gs$Supervision_Fee)
 				
@@ -445,11 +446,17 @@ SRUC_Prog_DS <- function() {
 		## Advances to the next course and repeats above steps until the list of courses is exhausted
 		j = j+1
 	}
+	
+	write.xlsx(Lost_Student_Check, paste("Outputs/Tests/LostStudentCheck_", yr, ".xlsx", sep=""), sheetName="IntStudDS", append=TRUE)
 }
 	
 #To Check inputs worked		
 SRUC_Prog_DS()
 SRUC_Student_DS
+SRUC_Student_DSFS
+SRUC_Student_DSFSTI
+
+
 ProgrammeFinances_SRUCstudent_DS
 ProgrammeFinances_SRUCstudent_DS["EE",]
 	
@@ -457,30 +464,39 @@ ProgrammeFinances_SRUCstudent_DS["EE",]
 SRUC_ExternalStudent_DS <- function() {
 	
 	Lost_Student_Check <- data.frame(Research_Group=character(), Pre_Merge=numeric(), Post_Merge=numeric(), Difference=numeric(), Highlights=character(), Lost_UUNs=character(), stringsAsFactors=FALSE)
-	## Imports xlsx for showing external student supervision details
-	fn <- paste("Inputs", "SRUC_ExternalDissertations", yr, ".xlsx", sep="")
-	SRUC_ExternalStudent_DS <<- read.xlsx(fn, header=TRUE, as.data.frame=TRUE)
 	
-	#Trim trailing whitespace in case this appears
-			## Source of this approach is: http://stackoverflow.com/questions/2261079/how-to-trim-leading-and-trailing-whitespace-in-r
-			### Look for sub-comment by Thieme Hennis Sep 19 '14 
-			SRUC_ExternalStudent_DS[[i]] <<- as.data.frame(apply(SRUC_ExternalStudent_DS[[i]],2,function (x) sub("\\s+$", "", x)))
-		
+	## Imports xlsx for showing external student supervision details
+	fn <- paste("Inputs/Dissertations/", "SRUC_ExternalDissertations", yr, ".xlsx", sep="")
+	SRUC_ExternalStudent_DSS <<- read.xlsx(fn, header=TRUE, sheetIndex=1, as.data.frame=TRUE)
+	
+		# Remove trailing numbers from UUNs
+		SRUC_ExternalStudent_DSS$UUN <<- as.character(SRUC_ExternalStudent_DSS$UUN)
+		SRUC_ExternalStudent_DSS$UUN <<- substr(SRUC_ExternalStudent_DSS$UUN, 1, nchar(SRUC_ExternalStudent_DSS$UUN)-2)
+		SRUC_ExternalStudent_DSS$UUN <<- as.character(SRUC_ExternalStudent_DSS$UUN)
+
 		
 		# Need to document the number of MSc students within the course before merging, in case the FeeStatus data
 			#is incomplete
-			Pre_Merge_Length <- length(SRUC_ExternalStudent_DS[[i]]$UUN)
-			Pre_Merge_UUN <- as.vector(SRUC_ExternalStudent_DS[[i]]$UUN)
+			Pre_Merge_Length <- length(SRUC_ExternalStudent_DSS$UUN)
+			Pre_Merge_UUN <- as.vector(SRUC_ExternalStudent_DSS$UUN)
+		
 		## Merges attendance list with fee status information
-		SRUC_ExternalStudent_DS[[i]] <<-merge(SRUC_ExternalStudent_DS[[i]], FeeStatus[ , c("UUN", "FSG")], by=c("UUN"))
+		SRUC_ExternalStudent_DSFS <<-merge(SRUC_ExternalStudent_DSS, FeeStatus[ , c("UUN", "FSG")], by=c("UUN"))
+		
+		# Rename FSG column to be "Fee_Status"
+		names(SRUC_ExternalStudent_DSFS)[names(SRUC_ExternalStudent_DSFS)=="FSG"] <<-"Fee_Status"
+		# Change any entry with RUK or SEU as the Fee Status Group to H (thus everything is O or H) 
+		SRUC_ExternalStudent_DSFS$Fee_Status[grepl("RUK|SEU", SRUC_ExternalStudent_DSFS$Fee_Status, ignore.case=FALSE)] <<- "H"
+		
+		
 		# Need to now check if any students no longer appear in the data frame. If they don't appear it is because
 			# they weren't in the Fee Status sheet...and the most likely explanation for that is they are pursuing their
 			# studies for longer than initially anticipated (e.g. have had an interruption or concession to change status)
 			# If this happens, this should print a warning to prompt us to go back and find the missing student data and
 			# add it into the FeeStatus sheet if appropriate (i.e. unless they have already paid all their tuition AND we
 			# have already been paid for it, and it's just the delay in them actually participating in whichever course
-			Post_Merge_Length <- length(SRUC_ExternalStudent_DS[[i]]$UUN)
-			Post_Merge_UUN <- as.vector(SRUC_ExternalStudent_DS[[i]]$UUN)
+			Post_Merge_Length <- length(SRUC_ExternalStudent_DSFS$UUN)
+			Post_Merge_UUN <- as.vector(SRUC_ExternalStudent_DSFS$UUN)
 			Diff <- Post_Merge_Length - Pre_Merge_Length
 			
 			if (Diff <0) {
@@ -498,29 +514,27 @@ SRUC_ExternalStudent_DS <- function() {
 			
 			#For reference on listing lost UUNs in final column: 
 			# http://stackoverflow.com/questions/13973116/convert-r-vector-to-string-vector-of-1-element
-			Lost_Student_Check[i,] <- c(Research_Groups[i], Pre_Merge_Length, Post_Merge_Length, abs(Diff), Highlights, paste(OnlyInPreMerge, collapse=", "))			   
+			Lost_Student_Check[i,] <- c(Pre_Merge_Length, Post_Merge_Length, abs(Diff), Highlights, paste(OnlyInPreMerge, collapse=", "))			   
 					   
-		# Rename FSG column to be "Fee_Status"
-		names(SRUC_ExternalStudent_DS[[i]])[names(SRUC_ExternalStudent_DS[[i]])=="FSG"] <<-"Fee_Status"
-		# Change any entry with RUK or SEU as the Fee Status Group to H (thus everything is O or H) 
-		SRUC_ExternalStudent_DS[[i]]$Fee_Status[grepl("RUK|SEU", SRUC_ExternalStudent_DS[[i]]$Fee_Status, ignore.case=FALSE)] <<- "H"
 		
 	## Merges supervision list with fee information
-	SRUC_ExternalStudent_DS <<-merge(SRUC_ExternalStudent_DS, TuitionFees[ , c("Tuition", "Programme", "Fee_Status")], by=c("Programme", "Fee_Status"))
-	## Re-orders supervision list with fee information so it's easier to read
-	SRUC_ExternalStudent_DS<<-SRUC_ExternalStudent_DS[c("UUN", "Surname", "Forename", "Programme", "Matriculation", "Enrollment", "School", "Supervisor", "Research_Group", "Fee_Status", "Tuition")]
-	## Calculates portion of total fee associated with each student's supervision
-	SRUC_ExternalStudent_DS[,12]<<-(0.10 * SRUC_ExternalStudent_DS[,11])
-	## Names this column to highlight the fee portion due to each student on the programme for supervision
-	names(SRUC_ExternalStudent_DS)[names(SRUC_ExternalStudent_DS)=="V12"]<<-"Supervision_Fee"
+	SRUC_ExternalStudent_DSFSTI <<-merge(SRUC_ExternalStudent_DSFS, TuitionFees_stacked[ , c("Tuition", "Programme", "Fee_Status")], by=c("Programme", "Fee_Status"))
 	
+	## Re-orders supervision list with fee information so it's easier to read
+	SRUC_ExternalStudent_DSFSTI<<-SRUC_ExternalStudent_DSFSTI[c("UUN", "Surname", "Forename", "Programme", "Matriculation", "Enrollment", "School", "Supervisor", "Research_Group", "Fee_Status", "Tuition")]
+	## Calculates portion of total fee associated with each student's supervision
+	SRUC_ExternalStudent_DSFSTI[12]<<-(0.10 * SRUC_ExternalStudent_DSFSTI[11])
+	## Names this column to highlight the fee portion due to each student on the programme for supervision
+	names(SRUC_ExternalStudent_DSFSTI)[names(SRUC_ExternalStudent_DSFSTI)=="V12"]<<-"Supervision_Fee"
+	
+
 	#Provides data on students by supervisor research group
 	i = 1
 	RGData <<- vector('list', length(Research_Groups))
 	
 	while (i <= length(Research_Groups)) {
 		## Separates out the subsets associated with each Research Group
-		RGData[[i]] <<- subset(SRUC_ExternalStudent_DS, Research_Group == Research_Groups[[i]])
+		RGData[[i]] <<- subset(SRUC_ExternalStudent_DSFSTI, Research_Group == as.character(Research_Groups[[i]]))
 				
 		## Advances to the next course and repeats above steps until the list of courses is exhausted
 		i = i+1
@@ -559,7 +573,9 @@ SRUC_ExternalStudent_DS <- function() {
 
 #To Check inputs worked
 SRUC_ExternalStudent_DS()
-SRUC_ExternalStudent_DS
+SRUC_ExternalStudent_DSS
+SRUC_ExternalStudent_DSFS
+SRUC_ExternalStudent_DSFSTI
 RGData
 RGFinances
 RGFinances["LEES",]
