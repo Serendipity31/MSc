@@ -1,3 +1,4 @@
+## USE R 3.3.2 64 bit version (important!)
 ##Notes for future...
 ###R starts with column 0, but row 1 for data frame with headers
 
