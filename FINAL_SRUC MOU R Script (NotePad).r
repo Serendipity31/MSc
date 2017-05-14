@@ -148,6 +148,7 @@ ImportClassData <- function () {
 		CourseData[[i]]$School[grepl("School Of Engineering", CourseData[[i]]$School, ignore.case=FALSE)] <<- "Engineering"
 		CourseData[[i]]$School[grepl("School Of Law", CourseData[[i]]$School, ignore.case=FALSE)] <<- "Law"
 		CourseData[[i]]$School[grepl("Business School", CourseData[[i]]$School, ignore.case=FALSE)] <<- "Business"
+		CourseData[[i]]$School[grepl("Edinburgh College Of Art", CourseData[[i]]$School, ignore.case=FALSE)] <<- "Art"
 		# remove any rows where there is a PhD student enrolled, as they should not be enrolled
 		CourseData[[i]] <<- CourseData[[i]][!grepl("PhD", CourseData[[i]]$Programme),]
 		
@@ -206,7 +207,7 @@ MergeClassData_FeeStatus <- function () {
 			#For reference on listing lost UUNs in final column: 
 			# http://stackoverflow.com/questions/13973116/convert-r-vector-to-string-vector-of-1-element
 			Lost_Student_Check[i,] <<- c(Courses[i], Pre_Merge_Length, Post_Merge_Length, abs(Diff), Highlights, paste(OnlyInPreMerge, collapse=", "))			   
-					   
+					 
 		# Rename FSG column to be "Fee_Status"
 		names(CourseDataFS[[i]])[8]<<-"Fee_Status"
 		# Change any entry with RUK or SEU as the Fee Status Group to H (thus everything is O or H) 
@@ -220,8 +221,6 @@ MergeClassData_FeeStatus <- function () {
 MergeClassData_FeeStatus()
 CourseDataFS
 CourseDataFS[19]
-
-
 					  
 MergeClassFeeStatus_TuitionInfo <- function () {
 	
@@ -242,15 +241,14 @@ MergeClassFeeStatus_TuitionInfo <- function () {
 		names(CourseDataFSTI[[i]])[names(CourseDataFSTI[[i]])=="V10"]<<-"Credit_Weighting"
 		## Re-orders attendance list with fee information so it's easier to read
 		CourseDataFSTI[[i]] <<-CourseDataFSTI[[i]][c("UUN", "Surname", "Forename", "Programme", "School", "Matriculation", "Enrollment", "Fee_Status", "Tuition", "Credit_Weighting")]
+				
 		## Calculates portion of total fee associated with each student on the course
-		## Builds the Course_Fee column based on whether a student is one of the 2 part time options
-		##  or everyone else (i.e. all the ft options). The % charged are increased to ensure the absolute 
-		## quantity paid for each course is the same as a ft student
+		## Builds the Course_Fee column and FTE Tuition column to ensure PT students pay same for course as FT students
 		CourseDataFSTI[[i]]$Course_Fee <<- ifelse(grepl("3 Years", CourseDataFSTI[[i]]$Programme, ignore.case=TRUE), 
-							0.15 * CourseDataFSTI[[i]]$Tuition * as.numeric(as.character(CourseDataFSTI[[i]]$Credit_Weighting)), 
-						ifelse(grepl("2 Years", CourseDataFSTI[[i]]$Programme, ignore.case=TRUE), 
-						       0.10 * CourseDataFSTI[[i]]$Tuition * as.numeric(as.character(CourseDataFSTI[[i]]$Credit_Weighting)), 
-						       0.05 * CourseDataFSTI[[i]]$Tuition * as.numeric(as.character(CourseDataFSTI[[i]]$Credit_Weighting))))
+											0.125 * 3 * CourseDataFSTI[[i]]$Tuition * as.numeric(as.character(CourseDataFSTI[[i]]$Credit_Weighting)), 
+											ifelse(grepl("2 Years", CourseDataFSTI[[i]]$Programme, ignore.case=TRUE), 
+											0.125 * 2 * CourseDataFSTI[[i]]$Tuition * as.numeric(as.character(CourseDataFSTI[[i]]$Credit_Weighting)), 
+											0.125 * 1 * CourseDataFSTI[[i]]$Tuition * as.numeric(as.character(CourseDataFSTI[[i]]$Credit_Weighting))))
 		
 		#Advances to the next course and repeats above steps until the list of courses is exhausted
 		i = i+1
@@ -271,7 +269,7 @@ Course_Level_Finances <- function() {
 	
 	i = 1
 	
-	CourseFinances <<- data.frame(All=numeric(), GeoSciences=numeric(), SPSS=numeric(), Law=numeric(), Engineering=numeric(),Business=numeric(), stringsAsFactors=FALSE)
+	CourseFinances <<- data.frame(All=numeric(), GeoSciences=numeric(), SPSS=numeric(), Law=numeric(), Engineering=numeric(),Business=numeric(), Art=numeric(), stringsAsFactors=FALSE)
 	
 	while (i <= length(Courses)) {
 		#Step 1: Define subsets of dataframes to group students from different schools on each course
@@ -280,6 +278,7 @@ Course_Level_Finances <- function() {
 		law <- subset(CourseDataFSTI[[i]], School == "Law")			
 		eng <- subset(CourseDataFSTI[[i]], School == "Engineering")
 		bus <- subset(CourseDataFSTI[[i]], School == "Business")
+		art <- subset(CourseDataFSTI[[i]], School == "Art")
 			
 		#Step 2: Determine the tuition associated with each course (in total and by school)
 		Total_All <- sum(CourseDataFSTI[[i]]$Course_Fee)
@@ -288,8 +287,9 @@ Course_Level_Finances <- function() {
 		Total_law <- sum(law$Course_Fee)
 		Total_eng <- sum(eng$Course_Fee)
 		Total_bus <- sum(bus$Course_Fee)
+		Total_art <- sum(art$Course_Fee)
 		
-		CourseFinances[i,] <<- list(Total_All, Total_gs,Total_spss, Total_law, Total_eng, Total_bus)
+		CourseFinances[i,] <<- list(Total_All, Total_gs,Total_spss, Total_law, Total_eng, Total_bus, Total_art)
 		#row.names(CourseFinances)[i] <<- CourseFinances[i]
 
 			
@@ -323,7 +323,7 @@ Programme_Level_Finances_Teaching <- function() {
 
 	#Creates a summary table of programme finances
 	j=1
-	ProgrammeFinances_TC <<- data.frame(All=numeric(), GeoSciences=numeric(), SPSS=numeric(), Law=numeric(), Engineering=numeric(),Business=numeric(), stringsAsFactors=FALSE)
+	ProgrammeFinances_TC <<- data.frame(All=numeric(), GeoSciences=numeric(), SPSS=numeric(), Law=numeric(), Engineering=numeric(),Business=numeric(), Art=numeric(), stringsAsFactors=FALSE)
 	
 	while (j <= length(Programmes)) {
 		#Within the dataframe showing courses owned by programmes, sum the relevant tuition fee components by column
@@ -333,8 +333,9 @@ Programme_Level_Finances_Teaching <- function() {
 		Total_law <- sum(ProgrammeData_TC[[j]]$Law)
 		Total_eng <- sum(ProgrammeData_TC[[j]]$Engineering)
 		Total_bus <- sum(ProgrammeData_TC[[j]]$Business)
+		Total_art <- sum(ProgrammeData_TC[[j]]$Art)
 		
-		ProgrammeFinances_TC[j,] <<- list(Total_All, Total_gs,Total_spss, Total_law, Total_eng, Total_bus)
+		ProgrammeFinances_TC[j,] <<- list(Total_All, Total_gs,Total_spss, Total_law, Total_eng, Total_bus, Total_art)
 		row.names(ProgrammeFinances_TC)[j] <<- Programmes[j]
 		
 		## Advances to the next course and repeats above steps until the list of courses is exhausted
@@ -417,7 +418,7 @@ SRUC_Prog_DS <- function() {
 		## Re-orders supervision list with fee information so it's easier to read
 		SRUC_Student_DSFSTI[[i]]<<-SRUC_Student_DSFSTI[[i]][c("UUN", "Surname", "Forename", "Programme", "Matriculation", "Enrollment", "School", "Supervisor", "Organisation", "Detail", "Fee_Status", "Tuition")]
 		## Calculates portion of total fee associated with each student's supervision
-		SRUC_Student_DSFSTI[[i]][,13]<<-(0.10 * SRUC_Student_DSFSTI[[i]][,12])
+		SRUC_Student_DSFSTI[[i]][,13]<<-(0.25 * SRUC_Student_DSFSTI[[i]][,12])
 		## Names this column to highlight the fee portion due to each student on the programme for supervision
 		names(SRUC_Student_DSFSTI[[i]])[names(SRUC_Student_DSFSTI[[i]])=="V13"]<<-"Supervision_Fee"
 		
