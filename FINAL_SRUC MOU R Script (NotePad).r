@@ -301,7 +301,7 @@ Course_Level_Finances <- function() {
 
 #To Check inputs worked
 Course_Level_Finances()
-CourseFinances["FEE",]
+CourseFinances[7,]
 	
 #Step 3: Income associated with teaching for individual programmes
 Programme_Level_Finances_Teaching <- function() {
