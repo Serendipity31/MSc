@@ -465,7 +465,7 @@ SRUC_Prog_DS <- function() {
 	}
 	
 	#Append summary row to table
-	ProgrammeFinances_SRUCstudent_DS_Totals <<- data.frame(sum(ProgrammeFinances_SRUCstudent_DS$All), sum(ProgrammeFinances_SRUCstudent_DS$SRUC),sum(ProgrammeFinances_SRUCstudent_DS$GeoSciences))
+	ProgrammeFinances_SRUCstudent_DS_Totals <<- data.frame(sum(ProgrammeFinances_SRUCstudent_DS$All), sum(ProgrammeFinances_SRUCstudent_DS$GBP_to_SRUC),sum(ProgrammeFinances_SRUCstudent_DS$GBP_to_GeoSciences))
 	names(ProgrammeFinances_SRUCstudent_DS_Totals) <<- names(ProgrammeFinances_SRUCstudent_DS)
 	row.names(ProgrammeFinances_SRUCstudent_DS_Totals) <<- "All_Programmes"
 	ProgrammeFinances_SRUCstudent_DS <<- rbind(ProgrammeFinances_SRUCstudent_DS, ProgrammeFinances_SRUCstudent_DS_Totals)
@@ -698,18 +698,20 @@ Gross_TC_Allocation <<- 0.90 * SRUC_FinalTC_Share
 Gross_IntDS_Allocation <<- 0.90 * SRUC_FinalIntDS_Share
 Gross_ExtDS_Allocation <<- 0.90 * SRUC_FinalExtDS_Share
 
-Gross_TC_IntDS_Per_Programme <- data.frame(matrix(0, nrow=6, ncol = 3)) 
-Gross_TC_IntDS_Per_Programme$Taught_Component <- Gross_TC_Allocation[,1]
-Gross_TC_IntDS_Per_Programme$Int_DS <- Gross_IntDS_Allocation[,2]
-Gross_TC_IntDS_Per_Programme$Total <- Gross_TC_Allocation[,1] + Gross_IntDS_Allocation[,2]
-Gross_TC_IntDS_Per_Programme <- Gross_TC_IntDS_Per_Programme[,4:6]
+Gross_TC_IntDS_Per_Programme <<- data.frame(matrix(0, nrow=6, ncol = 3)) 
+Gross_TC_IntDS_Per_Programme$Taught_Component <<- Gross_TC_Allocation[,1]
+Gross_TC_IntDS_Per_Programme$Int_DS <<- Gross_IntDS_Allocation[,2]
+Gross_TC_IntDS_Per_Programme$Total <<- Gross_TC_Allocation[,1] + Gross_IntDS_Allocation[,2]
+Gross_TC_IntDS_Per_Programme <<- Gross_TC_IntDS_Per_Programme[,4:6]
 row.names(Gross_TC_IntDS_Per_Programme) <<- c("EE", "EPM", "FS", "SS", "SPH", "All_Programmes")
 
 ##Total GeoSciences Admin Allocation
 Total_GS_Admin <<- TC_GS_Admin[6,1] + IntDS_GS_Admin[6,1] + ExtDS_GS_Admin[3,1]
 
 ##Summary Table
-GRAND_TOTALS <<- data.frame(Total_Top_Slice, Total_SRUC_Income, Total_GS_Admin)
+GRAND_TOTALS <<- data.frame(Total_Top_Slice, Total_SRUC_Income, Total_GS_Admin, sum(SRUC_FinalIntDS_Share[6,3]), (Total_GS_Admin + sum(SRUC_FinalIntDS_Share[6,3])))
+colnames(GRAND_TOTALS)[4] <<- "GBP_to_GS_for_DS"
+colnames(GRAND_TOTALS)[5] <<- "GeoSciences_Total"
 
 }
 
@@ -728,143 +730,7 @@ Gross_IntDS_Allocation
 Gross_ExtDS_Allocation 
 Gross_TC_IntDS_Per_Programme
 
-###PART 5: Institution-Level summary calculations
-
-Institutional_Summary <- function() {
-
-	i = 1
-		
-	#Shows the amount of money due to SRUC *from* each of the 5 schools we engage with for PGT delivery
-	SRUC_InstitutionalSummary <<- data.frame(Total=numeric(),Subtotal_GeoSciences=numeric(), GeoSciences_Teaching=numeric(), GeoSciences_Dissertations=numeric(), GeoScienes_Administration=numeric(),
-																Subtotal_SPSS=numeric(),SPSS_Teaching=numeric(), SPSS_Dissertations=numeric(),
-																Subtotal_Law=numeric(), Law_Teaching=numeric(), Law_Dissertations=numeric(),
-																Subtotal_Engineering=numeric(),Engineering_Teaching=numeric(), Engineering_Dissertations=numeric(),
-																Subtotal_Business=numeric(), Business_Teaching=numeric(), Business_Dissertations=numeric(),
-																stringsAsFactors=FALSE)
-	
-	#Populate GeoSciences portion of summary table
-	while (i <=length(Programmes)) {
-							
-		## Step 1: Determine total moneys owed from GeoSciences (vs others) to each programme across all elements of the fee
-		Total_teaching_gs <- ProgrammeFinances_TC[[i,"GeoSciences"]]
-		Total_diss_gs <- ProgrammeFinances_SRUCstudent_DS[[i,"SRUC"]]
-		Total_admin_gs <- ProgrammeFinances_Admin[[i, "SRUC"]]
-		Total_gs <- Total_teaching_gs + Total_diss_gs + Total_admin_gs
-
-		Total_teaching_spss <- ProgrammeFinances_TC[[i,"SPSS"]]
-		Total_diss_spss <- 0
-		Total_spss <- Total_teaching_spss + Total_diss_spss 
-
-		Total_teaching_law <- ProgrammeFinances_TC[[i,"Law"]]
-		Total_diss_law <- 0
-		Total_law <- Total_teaching_law + Total_diss_law 
-		
-		Total_teaching_eng <- ProgrammeFinances_TC[[i,"Engineering"]]
-		Total_diss_eng <- 0
-		Total_eng <- Total_teaching_eng + Total_diss_eng 
-		
-		Total_teaching_bus <- ProgrammeFinances_TC[[i,"Business"]]
-		Total_diss_bus <- 0
-		Total_bus <- Total_teaching_bus + Total_diss_bus
-		
-		Total_All <- Total_gs + Total_spss + Total_law + Total_eng + Total_bus
-				
-		SRUC_InstitutionalSummary[i,] <<- list(Total_All, Total_gs, Total_teaching_gs, Total_diss_gs, Total_admin_gs, 
-															Total_spss, Total_teaching_spss, Total_diss_spss,
-															Total_law, Total_teaching_law, Total_diss_law,
-															Total_eng, Total_teaching_eng, Total_diss_eng,
-															Total_bus, Total_teaching_bus, Total_diss_bus)
-															
-		row.names(SRUC_InstitutionalSummary)[i] <<- Programmes[i]
-		
-		## Advances to the next course and repeats above steps until the list of courses is exhausted
-		i = i+1
-	}
-		##Step 2: Determine total moneys owed to each research group across all relevant elements of the fee
-		
-		j = 1
-		
-		while (j <= length(Research_Groups)) {
-		## Step 1: Determine total moneys owed from GeoSciences to each programme across all elements of the fee
-		Total_teaching_gs <- 0
-		Total_diss_gs <- RGFinances[[j,"GeoSciences"]]
-		Total_admin_gs <- 0
-		Total_gs <- Total_teaching_gs + Total_diss_gs + Total_admin_gs
-
-		Total_teaching_spss <- 0
-		Total_diss_spss <- RGFinances[[j, "SPSS"]]
-		Total_spss <- Total_teaching_spss + Total_diss_spss 
-
-		Total_teaching_law <- 0
-		Total_diss_law <- RGFinances[[j, "Law"]]
-		Total_law <- Total_teaching_law + Total_diss_law 
-		
-		Total_teaching_eng <- 0
-		Total_diss_eng <- RGFinances[[j, "Engineering"]]
-		Total_eng <- Total_teaching_eng + Total_diss_eng 
-		
-		Total_teaching_bus <- 0
-		Total_diss_bus <- RGFinances[[j, "Business"]]
-		Total_bus <- Total_teaching_bus + Total_diss_bus
-		
-		Total_All <- Total_gs + Total_spss + Total_law + Total_eng + Total_bus
-				
-		SRUC_InstitutionalSummary[j+5,] <<- list(Total_All, Total_gs, Total_teaching_gs, Total_diss_gs, Total_admin_gs, 
-															Total_spss, Total_teaching_spss, Total_diss_spss,
-															Total_law, Total_teaching_law, Total_diss_law,
-															Total_eng, Total_teaching_eng, Total_diss_eng,
-															Total_bus, Total_teaching_bus, Total_diss_bus)
-															
-		row.names(SRUC_InstitutionalSummary)[j+5] <<- Research_Groups[j]
-		
-		## Advances to the next course and repeats above steps until the list of courses is exhausted
-		j = j+1
-	}
-		#Step 3: Determine sum totals across the whole organisation for all interactions with all schools
-		SumTotal_All <-sum(SRUC_InstitutionalSummary$Total)
-		SumTotal_gs <- sum(SRUC_InstitutionalSummary$Subtotal_GeoSciences)
-		SumTotal_gs_t <- sum(SRUC_InstitutionalSummary$GeoSciences_Teaching)
-		SumTotal_gs_d <- sum(SRUC_InstitutionalSummary$GeoSciences_Dissertations)
-		SumTotal_gs_a <- sum(SRUC_InstitutionalSummary$GeoSciences_Administration)
-		
-		SumTotal_spss <- sum(SRUC_InstitutionalSummary$Subtotal_SPSS)
-		SumTotal_spss_t <- sum(SRUC_InstitutionalSummary$SPSS_Teaching)
-		SumTotal_spss_d <- sum(SRUC_InstitutionalSummary$SPSS_Dissertations)
-		
-		SumTotal_law <- sum(SRUC_InstitutionalSummary$Subtotal_Law)
-		SumTotal_law_t <- sum(SRUC_InstitutionalSummary$Law_Teaching)
-		SumTotal_law_d <- sum(SRUC_InstitutionalSummary$Law_Dissertations)
-		
-		SumTotal_eng <- sum(SRUC_InstitutionalSummary$Subtotal_Engineering)
-		SumTotal_eng_t <- sum(SRUC_InstitutionalSummary$Engineering_Teaching)
-		SumTotal_eng_d <- sum(SRUC_InstitutionalSummary$Engineering_Dissertations)
-		
-		SumTotal_bus <- sum(SRUC_InstitutionalSummary$Subtotal_Business)
-		SumTotal_bus_t <- sum(SRUC_InstitutionalSummary$Business_Teaching)
-		SumTotal_bus_d <- sum(SRUC_InstitutionalSummary$Business_Dissertations)
-		
-		SRUC_InstitutionalSummary[8,]<<-list(SumTotal_All, SumTotal_gs, SumTotal_gs_t, SumTotal_gs_d, SumTotal_gs_a, 
-															SumTotal_spss, SumTotal_spss_t, SumTotal_spss_d,
-															SumTotal_law, SumTotal_law_t, SumTotal_law_d,
-															SumTotal_eng, SumTotal_eng_t, SumTotal_eng_d,
-															SumTotal_bus, SumTotal_bus_t,SumTotal_bus_d)
-		row.names(SRUC_InstitutionalSummary)[8] <<- "Sum Totals"
-		
-		SRUC_InstitutionalSummary <<-SRUC_InstitutionalSummary[c("Total", "Subtotal_GeoSciences", "GeoSciences_Teaching", "GeoSciences_Dissertations", "GeoScienes_Administration",
-																	"Subtotal_SPSS", "SPSS_Teaching", "SPSS_Dissertations",
-																	"Subtotal_Law", "Subtotal_Engineering", "Subtotal_Business",
-																	"Law_Teaching", "Law_Dissertations",
-																	"Engineering_Teaching", "Engineering_Dissertations",
-																	"Business_Teaching", "Business_Dissertations")]
-}
-	
-#To Check inputs worked		
-Institutional_Summary()
-SRUC_InstitutionalSummary
-SRUC_InstitutionalSummary["EE",]
-
-
-###PART 6: Export all relevant results to Excel workbook
+###PART 5: Export all relevant results to Excel workbook
 
 #This Excel file should be a workbook with the following features:
 # 1. The first page should show the total owed to SRUC across all programmes, showing split by School (GS, Engineering, SPSS, Law, Business)
@@ -872,11 +738,34 @@ SRUC_InstitutionalSummary["EE",]
 # Subsequent worksheets should show the individual course pages for all SRUC courses
 
 	## Step 1: Prep the worksheets that are desired in the Excel document
-		#SRUC Summary Information
-		SRUC_Summary <- SRUC_InstitutionalSummary
-		Admin_Summary <- ProgrammeFinances_Admin
-		LEES_Diss <- RGData[1]
-		CS_Diss <- RGData[2]
+		#Grand Totals
+		GRAND_TOTALS <<- data.frame(Total_Top_Slice, Total_SRUC_Income, Total_GS_Admin)
+		
+		#Top-Slice
+		TC_Top_Slice
+		InternalDS_Top_Slice
+		ExternalDS_Top_Slice
+		
+		#GeoSciences Administration Fee Allocation
+		TC_GS_Admin
+		IntDS_GS_Admin
+		ExtDS_GS_Admin
+		
+		#SRUC Totals after admin costs
+		SRUC_FinalTC_Share
+		SRUC_FinalIntDS_Share
+		SRUC_FinalExtDS_Share
+		
+		#SRUC PGO Summary Information
+		Total_SRUC_PGOffice
+		Gross_TC_PGO_Allocation 
+		Gross_IntDS_PGO_Allocation 
+		Gross_ExtDS_PGO_Allocation 
+		
+		#SRUC Programmes & Research Groups
+		Gross_TC_Allocation
+		
+		
 		
 		#Ecological Economics Worksheets
 		EE_Admin <- SRUC_AdminData[1]
