@@ -341,11 +341,13 @@ Programme_Level_Finances_Teaching <- function() {
 		## Advances to the next course and repeats above steps until the list of courses is exhausted
 		j = j+1
 	}
+	
 }
 		
 #To Check inputs worked		
 Programme_Level_Finances_Teaching()
 ProgrammeData_TC
+ProgrammeData_TC["EE"]
 ProgrammeFinances_TC		
 				   		
 ###PART 3: Calculations related to dissertation supervision
@@ -356,7 +358,7 @@ ProgrammeFinances_TC
 SRUC_Prog_DS <- function() {
 
 	i = 1
-	Lost_Student_Check <- data.frame(Programme=character(), Pre_Merge=numeric(), Post_Merge=numeric(), Difference=numeric(), Highlights=character(), Lost_UUNs=character(), stringsAsFactors=FALSE)
+	Lost_SRUC_DSStudent_Check <<- data.frame(Programme=character(), Pre_Merge=numeric(), Post_Merge=numeric(), Difference=numeric(), Highlights=character(), Lost_UUNs=character(), stringsAsFactors=FALSE)
 	SRUC_Student_DS <<- vector('list', length(Programmes))
 	SRUC_Student_DSFS <<- vector('list', length(Programmes))
 	SRUC_Student_DSFSTI <<- vector('list', length(Programmes))
@@ -404,7 +406,7 @@ SRUC_Prog_DS <- function() {
 			
 			#For reference on listing lost UUNs in final column: 
 			# http://stackoverflow.com/questions/13973116/convert-r-vector-to-string-vector-of-1-element
-			Lost_Student_Check[i,] <- c(Programmes[i], Pre_Merge_Length, Post_Merge_Length, abs(Diff), Highlights, paste(OnlyInPreMerge, collapse=", "))			   
+			Lost_SRUC_DSStudent_Check[i,] <<- c(Programmes[i], Pre_Merge_Length, Post_Merge_Length, abs(Diff), Highlights, paste(OnlyInPreMerge, collapse=", "))			   
 					   
 		# Rename FSG column to be "Fee_Status"
 		names(SRUC_Student_DSFS[[i]])[names(SRUC_Student_DSFS[[i]])=="FSG"] <<-"Fee_Status"
@@ -427,6 +429,8 @@ SRUC_Prog_DS <- function() {
 	}
 	
 	names(SRUC_Student_DSFSTI) <<- Programmes
+	names(SRUC_Student_DS) <<- Programmes
+	names(SRUC_Student_DSFS) <<- Programmes
 								     
 	
 	# Calculates allocation of disertation supervision funds for SRUC students
@@ -451,15 +455,18 @@ SRUC_Prog_DS <- function() {
 		j = j+1
 	}
 	
-	write.xlsx(Lost_Student_Check, paste("Outputs/Tests/LostStudentCheck_", yr, ".xlsx", sep=""), sheetName="IntStudDS", append=TRUE)
+	write.xlsx(Lost_SRUC_DSStudent_Check, paste("Outputs/Tests/LostStudentCheck_", yr, ".xlsx", sep=""), sheetName="IntStudDS", append=TRUE)
 }
 	
 #To Check inputs worked		
 SRUC_Prog_DS()
+SRUC_Student_DS[1]
+SRUC_Student_DSFS[1]
+SRUC_Student_DSFSTI[1]
+
 SRUC_Student_DS
 SRUC_Student_DSFS
 SRUC_Student_DSFSTI
-
 
 ProgrammeFinances_SRUCstudent_DS
 ProgrammeFinances_SRUCstudent_DS["EE",]
@@ -467,16 +474,16 @@ ProgrammeFinances_SRUCstudent_DS["EE",]
 #Step 2: Calculates supervision fees associated with SRUC staff supervising non-SRUC students
 SRUC_ExternalStudent_DS <- function() {
 	
-	Lost_Student_Check <- data.frame(Research_Group=character(), Pre_Merge=numeric(), Post_Merge=numeric(), Difference=numeric(), Highlights=character(), Lost_UUNs=character(), stringsAsFactors=FALSE)
+	Lost_nonSRUC_DSStudent_Check <<- data.frame(Pre_Merge=numeric(), Post_Merge=numeric(), Difference=numeric(), Highlights=character(), Lost_UUNs=character(), stringsAsFactors=FALSE)
 	
 	## Imports xlsx for showing external student supervision details
 	fn <- paste("Inputs/Dissertations/", "SRUC_ExternalDissertations", yr, ".xlsx", sep="")
 	SRUC_ExternalStudent_DSS <<- read.xlsx(fn, header=TRUE, sheetIndex=1, as.data.frame=TRUE)
 	
 		# Remove trailing numbers from UUNs
-		SRUC_ExternalStudent_DSS$UUN <- as.character(SRUC_ExternalStudent_DSS$UUN)
-		SRUC_ExternalStudent_DSS$UUN <- substr(SRUC_ExternalStudent_DSS$UUN, 1, nchar(SRUC_ExternalStudent_DSS$UUN)-2)
-		SRUC_ExternalStudent_DSS$UUN <- as.character(SRUC_ExternalStudent_DSS$UUN)
+		SRUC_ExternalStudent_DSS$UUN <<- as.character(SRUC_ExternalStudent_DSS$UUN)
+		SRUC_ExternalStudent_DSS$UUN <<- substr(SRUC_ExternalStudent_DSS$UUN, 1, nchar(SRUC_ExternalStudent_DSS$UUN)-2)
+		SRUC_ExternalStudent_DSS$UUN <<- as.character(SRUC_ExternalStudent_DSS$UUN)
 
 		
 		# Need to document the number of MSc students within the course before merging, in case the FeeStatus data
@@ -485,12 +492,12 @@ SRUC_ExternalStudent_DS <- function() {
 			Pre_Merge_UUN <- as.vector(SRUC_ExternalStudent_DSS$UUN)
 		
 		## Merges attendance list with fee status information
-		SRUC_ExternalStudent_DSFS <<-merge(SRUC_ExternalStudent_DSS, FeeStatus[ , c("UUN", "FSG")], by=c("UUN"))
+		SRUC_ExternalStudent_DSFS <<- merge(SRUC_ExternalStudent_DSS, FeeStatus[ , c("UUN", "FSG")], by=c("UUN"))
 		
 		# Rename FSG column to be "Fee_Status"
-		names(SRUC_ExternalStudent_DSFS)[names(SRUC_ExternalStudent_DSFS)=="FSG"] <-"Fee_Status"
+		names(SRUC_ExternalStudent_DSFS)[names(SRUC_ExternalStudent_DSFS)=="FSG"] <<-"Fee_Status"
 		# Change any entry with RUK or SEU as the Fee Status Group to H (thus everything is O or H) 
-		SRUC_ExternalStudent_DSFS$Fee_Status[grepl("RUK|SEU", SRUC_ExternalStudent_DSFS$Fee_Status, ignore.case=FALSE)] <- "H"
+		SRUC_ExternalStudent_DSFS$Fee_Status[grepl("RUK|SEU", SRUC_ExternalStudent_DSFS$Fee_Status, ignore.case=FALSE)] <<- "H"
 		
 		
 		# Need to now check if any students no longer appear in the data frame. If they don't appear it is because
@@ -518,53 +525,50 @@ SRUC_ExternalStudent_DS <- function() {
 			
 			#For reference on listing lost UUNs in final column: 
 			# http://stackoverflow.com/questions/13973116/convert-r-vector-to-string-vector-of-1-element
-			Lost_Student_Check[i,] <- c(Pre_Merge_Length, Post_Merge_Length, abs(Diff), Highlights, paste(OnlyInPreMerge, collapse=", "))			   
-					   
+			Lost_nonSRUC_DSStudent_Check[1,] <<- c(Pre_Merge_Length, Post_Merge_Length, abs(Diff), Highlights, paste(OnlyInPreMerge, collapse=", "))			   
+			write.xlsx(Lost_nonSRUC_DSStudent_Check, paste("Outputs/Tests/LostStudentCheck_", yr, ".xlsx", sep=""), sheetName="ExtStudDS", append=TRUE)									
 		
 	## Merges supervision list with fee information
-	SRUC_ExternalStudent_DSFSTI <<-merge(SRUC_ExternalStudent_DSFS, TuitionFees_stacked[ , c("Tuition", "Programme", "Fee_Status")], by=c("Programme", "Fee_Status"))
+	SRUC_ExternalStudent_DSFSTI <<- merge(SRUC_ExternalStudent_DSFS, TuitionFees_stacked[ , c("Tuition", "Programme", "Fee_Status")], by=c("Programme", "Fee_Status"))
 	
 	## Re-orders supervision list with fee information so it's easier to read
 	SRUC_ExternalStudent_DSFSTI<<- SRUC_ExternalStudent_DSFSTI[c("UUN", "Surname", "Forename", "Programme", "Matriculation", "Enrollment", "School", "Supervisor", "Research_Group", "Fee_Status", "Tuition")]
 	SRUC_ExternalStudent_DSFSTI
 	## Calculates portion of total fee associated with each student's supervision
-	SRUC_ExternalStudent_DSFSTI[12] <-(0.10 * SRUC_ExternalStudent_DSFSTI[11])
+	SRUC_ExternalStudent_DSFSTI[,12] <<-(0.25 * SRUC_ExternalStudent_DSFSTI[,11])
 	SRUC_ExternalStudent_DSFSTI
 	## Names this column to highlight the fee portion due to each student on the programme for supervision
-	names(SRUC_ExternalStudent_DSFSTI)[12]<-"Supervision_Fee"
+	names(SRUC_ExternalStudent_DSFSTI)[12]<<-"Supervision_Fee"
 	SRUC_ExternalStudent_DSFSTI
-
+	
 	# Need to specify column and/or change it to character from factor to get to work...
-		SRUC_ExternalStudent_DSFSTI$School <- as.character(SRUC_ExternalStudent_DSFSTI$School)
-		SRUC_ExternalStudent_DSFSTI$School[grepl("School Of Geosciences", SRUC_ExternalStudent_DSFSTI$School, ignore.case=FALSE)] <- "GeoSciences"
-		SRUC_ExternalStudent_DSFSTI$School[grepl("School Of Social And Political Science", SRUC_ExternalStudent_DSFSTI$School, ignore.case=FALSE)] <- "SPSS"
-		SRUC_ExternalStudent_DSFSTI$School[grepl("School Of Engineering", SRUC_ExternalStudent_DSFSTI$School, ignore.case=FALSE)] <- "Engineering"
-		SRUC_ExternalStudent_DSFSTI$School[grepl("School Of Law", SRUC_ExternalStudent_DSFSTI$School, ignore.case=FALSE)] <- "Law"
-		SRUC_ExternalStudent_DSFSTI$School[grepl("Business School", SRUC_ExternalStudent_DSFSTI$School, ignore.case=FALSE)] <- "Business"		
+		SRUC_ExternalStudent_DSFSTI$School <<- as.character(SRUC_ExternalStudent_DSFSTI$School)
+		SRUC_ExternalStudent_DSFSTI$School[grepl("School Of Geosciences", SRUC_ExternalStudent_DSFSTI$School, ignore.case=FALSE)] <<- "GeoSciences"
+		SRUC_ExternalStudent_DSFSTI$School[grepl("School Of Social And Political Science", SRUC_ExternalStudent_DSFSTI$School, ignore.case=FALSE)] <<- "SPSS"
+		SRUC_ExternalStudent_DSFSTI$School[grepl("School Of Engineering", SRUC_ExternalStudent_DSFSTI$School, ignore.case=FALSE)] <<- "Engineering"
+		SRUC_ExternalStudent_DSFSTI$School[grepl("School Of Law", SRUC_ExternalStudent_DSFSTI$School, ignore.case=FALSE)] <<- "Law"
+		SRUC_ExternalStudent_DSFSTI$School[grepl("Business School", SRUC_ExternalStudent_DSFSTI$School, ignore.case=FALSE)] <<- "Business"
+		SRUC_ExternalStudent_DSFSTI$School[grepl("Edinburgh College Of Art", SRUC_ExternalStudent_DSFSTI$School, ignore.case=FALSE)] <<- "Art"	
 
+#Step 3: Groups supervision fees associated with SRUC staff supervising non-SRUC students by Research Group
 
-	#Provides data on students by supervisor research group
 	i = 1
-	RGData <- vector('list', length(Research_Groups))
+	RGData <<- vector('list', length(Research_Groups))
 	
 	while (i <= length(Research_Groups)) {
 		## Separates out the subsets associated with each Research Group
-		RGData[[i]] <- subset(SRUC_ExternalStudent_DSFSTI, Research_Group == as.character(Research_Groups[[i]]))
+		RGData[[i]] <<- subset(SRUC_ExternalStudent_DSFSTI, Research_Group == as.character(Research_Groups[[i]]))
 		
 		## Advances to the next course and repeats above steps until the list of courses is exhausted
 		i = i+1
 	}
 	
 	RGData 
-	names(RGData) <- Research_Groups
+	names(RGData) <<- Research_Groups
 
-
-
-	write.xlsx(Lost_Student_Check, paste("Outputs/Tests/LostStudentCheck_", yr, ".xlsx", sep="", ), sheetName="ExtStudDS", append=TRUE)
-				
 	# Creates summary financial picture by research group 
 	j = 1
-	RGFinances <- data.frame(All=numeric(), GS=numeric(), SPSS=numeric(), Law=numeric(), Engineering=numeric(),Business=numeric(), stringsAsFactors=FALSE)
+	RGFinances <<- data.frame(All=numeric(), GS=numeric(), SPSS=numeric(), Law=numeric(), Engineering=numeric(),Business=numeric(), Art=numeric(), stringsAsFactors=FALSE)
 	
 	while (j <= length(RGData)) {
 		#Step 1: Pull out the subsets of students from each school being supervised by SRUC staff in each research group
@@ -573,6 +577,7 @@ SRUC_ExternalStudent_DS <- function() {
 		law <- subset(RGData[[j]], School == "Law")			
 		eng <- subset(RGData[[j]], School == "Engineering")
 		bus <- subset(RGData[[j]], School == "Business")
+		art <- subset(RGData[[j]], School == "Art")
 			
 		#Step 2: Determine the total tuition associated with supervising by student school 
 		Total_All <- sum(RGData[[j]]$Supervision_Fee)
@@ -581,9 +586,10 @@ SRUC_ExternalStudent_DS <- function() {
 		Total_law <- sum(law$Supervision_Fee)
 		Total_eng <- sum(eng$Supervision_Fee)
 		Total_bus <- sum(bus$Supervision_Fee)
+		Total_art <- sum(art$Supervision_Fee)
 		
-		RGFinances[j,] <- list(Total_All, Total_gs,Total_spss, Total_law, Total_eng, Total_bus)
-		row.names(RGFinances)[j] <- Research_Groups[j]
+		RGFinances[j,] <<- list(Total_All, Total_gs,Total_spss, Total_law, Total_eng, Total_bus, Total_art)
+		row.names(RGFinances)[j] <<- Research_Groups[j]
 		
 		## Advances to the next course and repeats above steps until the list of courses is exhausted
 		j = j+1
@@ -592,9 +598,11 @@ SRUC_ExternalStudent_DS <- function() {
 
 #To Check inputs worked
 SRUC_ExternalStudent_DS()
+
 SRUC_ExternalStudent_DSS
 SRUC_ExternalStudent_DSFS
 SRUC_ExternalStudent_DSFSTI
+
 RGData
 RGFinances
 RGFinances["LEES",]
