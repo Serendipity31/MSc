@@ -714,7 +714,7 @@ row.names(Gross_TC_IntDS_Per_Programme) <<- c("EE", "EPM", "FS", "SS", "SPH", "A
 Total_GS_Admin <<- TC_GS_Admin[6,1] + IntDS_GS_Admin[6,1] + ExtDS_GS_Admin[3,1]
 
 ##Summary Table
-GRAND_TOTALS <<- data.frame(Total_Top_Slice, Total_SRUC_Income, Total_GS_Admin, sum(SRUC_FinalIntDS_Share[6,3]), (Total_GS_Admin + sum(SRUC_FinalIntDS_Share[6,3])))
+GRAND_TOTALS <<- data.frame(Total_Top_Slice, Total_SRUC_Income, Total_GS_Admin, (0.85 * InternalDS_SRUC_Share[6,3]), (Total_GS_Admin + (0.85 * InternalDS_SRUC_Share[6,3])))
 colnames(GRAND_TOTALS)[4] <<- "GBP_to_GS_for_DS"
 colnames(GRAND_TOTALS)[5] <<- "GeoSciences_Total"
 
@@ -816,26 +816,26 @@ Gross_TC_IntDS_Per_Programme
 SRUC.PGT.AnnualFinancialSummary <- function (file, GRAND_TOTALS, 
 									TC_Top_Slice, InternalDS_Top_Slice, ExternalDS_Top_Slice,
 									TC_GS_Admin, IntDS_GS_Admin, ExtDS_GS_Admin,
-									TC_GS_Admin, IntDS_GS_Admin, ExtDS_GS_Admin,
+									SRUC_FinalTC_Share, SRUC_FinalIntDS_Share, SRUC_FinalExtDS_Share,
 									Total_SRUC_PGOffice, Gross_TC_PGO_Allocation, Gross_IntDS_PGO_Allocation, Gross_ExtDS_PGO_Allocation,
 									Gross_TC_Allocation, Gross_IntDS_Allocation, Gross_ExtDS_Allocation,
 									EE_Diss, EE_Courses, FEE_Summary, EV_Summary, AEE_Summary, PPP_Summary, EIA_Summary,
 					    			EPM_Diss, EPM_Courses, AQCG_Summary, LUEI_Summary, WRM_Summary, EVM_Summary, AEST_Summary, 
 					    			FS_Diss, FS_Courses, FAFS_Summary, IFS_Summary, SFP_Summary,
 					    			SS_Diss, SS_Courses, SPM_Summary, SET_Summary, SSCA_Summary,
-					    			SPH_Diss, SPH_Courses, FPH_Summary, SOPH_Summary, PHGC_Summary) {
+					    			SPH_Diss, SPH_Courses, FPH_Summary, FOPH_Summary, PHGC_Summary) {
 	require(xlsx, quietly=TRUE)
 	objects <- list(GRAND_TOTALS, 
 					TC_Top_Slice, InternalDS_Top_Slice, ExternalDS_Top_Slice,
 					TC_GS_Admin, IntDS_GS_Admin, ExtDS_GS_Admin,
-					TC_GS_Admin, IntDS_GS_Admin, ExtDS_GS_Admin,
+					SRUC_FinalTC_Share, SRUC_FinalIntDS_Share, SRUC_FinalExtDS_Share, 
 					Total_SRUC_PGOffice, Gross_TC_PGO_Allocation, Gross_IntDS_PGO_Allocation, Gross_ExtDS_PGO_Allocation,
 					Gross_TC_Allocation, Gross_IntDS_Allocation, Gross_ExtDS_Allocation,
 					EE_Diss, EE_Courses, FEE_Summary, EV_Summary, AEE_Summary, PPP_Summary, EIA_Summary,
 					EPM_Diss, EPM_Courses, AQCG_Summary, LUEI_Summary, WRM_Summary, EVM_Summary, AEST_Summary, 
 					FS_Diss, FS_Courses, FAFS_Summary, IFS_Summary, SFP_Summary,
 					SS_Diss, SS_Courses, SPM_Summary, SET_Summary, SSCA_Summary,
-					SPH_Diss, SPH_Courses, FPH_Summary, SOPH_Summary, PHGC_Summary)
+					SPH_Diss, SPH_Courses, FPH_Summary, FOPH_Summary, PHGC_Summary)
 	fargs <- as.list(match.call(expand.dots = TRUE))
 	objnames <- as.character(fargs)[-c(1,2)]
 	nobjects <- length(objects)
@@ -855,14 +855,14 @@ SRUC.PGT.AnnualFinancialSummary(paste("Outputs/SRUC_PGT_FinancialSummary_", yr, 
 									GRAND_TOTALS, 
 									TC_Top_Slice, InternalDS_Top_Slice, ExternalDS_Top_Slice,
 									TC_GS_Admin, IntDS_GS_Admin, ExtDS_GS_Admin,
-									TC_GS_Admin, IntDS_GS_Admin, ExtDS_GS_Admin,
+									SRUC_FinalTC_Share, SRUC_FinalIntDS_Share, SRUC_FinalExtDS_Share,
 									Total_SRUC_PGOffice, Gross_TC_PGO_Allocation, Gross_IntDS_PGO_Allocation, Gross_ExtDS_PGO_Allocation,
 									Gross_TC_Allocation, Gross_IntDS_Allocation, Gross_ExtDS_Allocation,
 									EE_Diss, EE_Courses, FEE_Summary, EV_Summary, AEE_Summary, PPP_Summary, EIA_Summary,
 					    			EPM_Diss, EPM_Courses, AQCG_Summary, LUEI_Summary, WRM_Summary, EVM_Summary, AEST_Summary, 
 					    			FS_Diss, FS_Courses, FAFS_Summary, IFS_Summary, SFP_Summary,
 					    			SS_Diss, SS_Courses, SPM_Summary, SET_Summary, SSCA_Summary,
-					    			SPH_Diss, SPH_Courses, FPH_Summary, SOPH_Summary, PHGC_Summary)
+					    			SPH_Diss, SPH_Courses, FPH_Summary, FOPH_Summary, PHGC_Summary)
 
 #Generates excel file with just EE information
 EE.PGT.AnnualFinancialSummary <- function (file, EE_Diss, EE_Courses, FEE_Summary, EV_Summary, AEE_Summary, PPP_Summary, EIA_Summary) {
@@ -947,7 +947,7 @@ FS.PGT.AnnualFinancialSummary(paste("Outputs/SS_PGT_FinancialSummary_", yr, ".xl
 #Generates excel file with just SPH information 
 SPH.PGT.AnnualFinancialSummary <- function (file, SPH_Diss, SPH_Courses, FPH_Summary, SOPH_Summary, PHGC_Summary) {
 	require(xlsx, quietly=TRUE)
-	objects <- list(SPH_Diss, SPH_Courses, FPH_Summary, SOPH_Summary, PHGC_Summary)
+	objects <- list(SPH_Diss, SPH_Courses, FPH_Summary, FOPH_Summary, PHGC_Summary)
 	fargs <- as.list(match.call(expand.dots = TRUE))
 	objnames <- as.character(fargs)[-c(1,2)]
 	nobjects <- length(objects)
@@ -962,7 +962,7 @@ SPH.PGT.AnnualFinancialSummary <- function (file, SPH_Diss, SPH_Courses, FPH_Sum
 	print(paste("Workbook", file, "has", nobjects, "worksheets."))
 }
 
-SPH.PGT.AnnualFinancialSummary(paste("Outputs/SPH_PGT_FinancialSummary_", yr, ".xlsx", sep=""), SPH_Diss, SPH_Courses, FPH_Summary, SOPH_Summary, PHGC_Summary)
+SPH.PGT.AnnualFinancialSummary(paste("Outputs/SPH_PGT_FinancialSummary_", yr, ".xlsx", sep=""), SPH_Diss, SPH_Courses, FPH_Summary, FOPH_Summary, PHGC_Summary)
 
 
 
