@@ -151,6 +151,8 @@ ImportClassData <- function () {
 		CourseData[[i]]$School[grepl("Edinburgh College Of Art", CourseData[[i]]$School, ignore.case=FALSE)] <<- "Art"
 		# remove any rows where there is a PhD student enrolled, as they should not be enrolled
 		CourseData[[i]] <<- CourseData[[i]][!grepl("PhD", CourseData[[i]]$Programme),]
+		# remove any rows with an auditing student, as they shouldn't be counted
+		CourseData[[i]] <<- CourseData[[i]][!grepl("Audit", CourseData[[i]]$Enrollment),]
 		
 		i=i+1
 	}
