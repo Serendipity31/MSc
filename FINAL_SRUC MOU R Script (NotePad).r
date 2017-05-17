@@ -78,7 +78,7 @@ ImportTuitionData()
 TuitionFees_stacked[1:10,] #checks function has worked
 as.character(TuitionFees_stacked[1, 2])
 
-					     
+#This next step takes ~6 minutes. If there was a way to speed this or reduce the size of the dataset, that would be good.					     
 ImportFeeStatusData <- function() {
 
 	# Import the datafile showing the fee status determined by admissions for all students in 5 schools (CFUF/UF)
@@ -108,7 +108,7 @@ FeeStatus[1:10,] #checks function has worked
 
 # Step 2: Iteratively import attendance lists, rearrange them, and merge with fee status,  tuition fee, and credit information to 
 # enable the calculation of course fee owed to each programme per student on the courses (irrespective of PT status or school of
-# origin)
+# origin). This takes ~2 minutes 
 		
 ImportClassData <- function () {
 	CourseData <<- NULL
@@ -162,9 +162,11 @@ ImportClassData <- function () {
 
 ImportClassData()
 CourseData[[19]]
-CourseData["FEE"]
-CourseData[20]
+CourseData["EIA"]
+CourseData["SFP"]
+CourseData
 
+#This next step takes ~0 minutes
 MergeClassData_FeeStatus <- function () {
 
 	i = 1
@@ -222,8 +224,10 @@ MergeClassData_FeeStatus <- function () {
 
 MergeClassData_FeeStatus()
 CourseDataFS
-CourseDataFS[19]
-					  
+CourseDataFS["EIA"]
+CourseDataFS["SFP"]
+
+#This next step takes ~0 minutes					  
 MergeClassFeeStatus_TuitionInfo <- function () {
 	
 	i = 1
@@ -252,6 +256,7 @@ MergeClassFeeStatus_TuitionInfo <- function () {
 											0.125 * 2 * CourseDataFSTI[[i]]$Tuition * as.numeric(as.character(CourseDataFSTI[[i]]$Credit_Weighting)), 
 											0.125 * 1 * CourseDataFSTI[[i]]$Tuition * as.numeric(as.character(CourseDataFSTI[[i]]$Credit_Weighting))))
 		
+		# Calculates the different top slices for easy of comparison/reference later
 		CourseDataFSTI[[i]]$Net_TopSlice <<- 0.80 * as.numeric(as.character(CourseDataFSTI[[i]]$Course_Fee))
 		CourseDataFSTI[[i]]$Net_GSAdmin <<- 0.85 * CourseDataFSTI[[i]]$Net_TopSlice
 		CourseDataFSTI[[i]]$Net_PGO <<- 0.90 * CourseDataFSTI[[i]]$Net_GSAdmin
@@ -264,12 +269,12 @@ MergeClassFeeStatus_TuitionInfo <- function () {
 }
 
 MergeClassFeeStatus_TuitionInfo()
-CourseDataFSTI[[19]]
-	  
+CourseDataFSTI[["EIA"]]
+CourseDataFSTI[["SFP"]]  
 					  
 #######################Start HERE###################					  
 					  
-#Step 2: Income associated with teaching individual courses
+#Step 2: Income associated with teaching individual courses. This next step takes ~0 minutes
 Course_Level_Finances <- function() {
 	
 	i = 1
@@ -367,12 +372,12 @@ ProgrammeFinances_TC
 ###PART 3: Calculations related to dissertation supervision
 	
 #Step 1: Calculate and apportion income for SRUC students within a particular programme associated with dissertation supervision. 
-# The data files must include PT students for each year they are paying fees, as an equal % is taken each year
+# Include PT students for each year they are receiving supervision. The supervision amount will be scaled accordingly
 
 SRUC_Prog_DS <- function() {
 
 	i = 1
-	Lost_SRUC_DSStudent_Check <<- data.frame(Programme=character(), Pre_Merge=numeric(), Post_Merge=numeric(), Difference=numeric(), Highlights=character(), Lost_UUNs=character(), stringsAsFactors=FALSE)
+	Lost_SRUC_DSStudent_Check <<- data.frame(Programme=character(), Pre_Merge=numeric(), Post_Merge=numeric(), Difference=numeric(), Highlights=character(), Lost_UUNs=character(), Gained_UUNs=character(), stringsAsFactors=FALSE)
 	SRUC_Student_DS <<- vector('list', length(Programmes))
 	SRUC_Student_DSFS <<- vector('list', length(Programmes))
 	SRUC_Student_DSFSTI <<- vector('list', length(Programmes))
@@ -408,9 +413,10 @@ SRUC_Prog_DS <- function() {
 			if (Diff <0) {
 				Highlights <- paste("Warning:", abs(Diff) , "Student(s) LOST during merge")
 			}
-			else {
-				Highlights <- ""
+			elseif (Diff >0) {
+				Highlights <- "Warning:", abs(Diff), "Student(s) GAINED during merge")
 			}
+			{Highlights <- ""}
 			
 			# Code from: http://stackoverflow.com/questions/17598134/compare-two-lists-in-r
 			# Look for Teemu Daniel Laajala
@@ -420,7 +426,7 @@ SRUC_Prog_DS <- function() {
 			
 			#For reference on listing lost UUNs in final column: 
 			# http://stackoverflow.com/questions/13973116/convert-r-vector-to-string-vector-of-1-element
-			Lost_SRUC_DSStudent_Check[i,] <<- c(Programmes[i], Pre_Merge_Length, Post_Merge_Length, abs(Diff), Highlights, paste(OnlyInPreMerge, collapse=", "))			   
+			Lost_SRUC_DSStudent_Check[i,] <<- c(Programmes[i], Pre_Merge_Length, Post_Merge_Length, abs(Diff), Highlights, paste(OnlyInPreMerge, collapse=", "), paste(OnlyInPostMerge, collapse=", "))			   
 					   
 		# Rename FSG column to be "Fee_Status"
 		names(SRUC_Student_DSFS[[i]])[names(SRUC_Student_DSFS[[i]])=="FSG"] <<-"Fee_Status"
@@ -432,11 +438,28 @@ SRUC_Prog_DS <- function() {
 		## Merges supervision list with fee information
 		SRUC_Student_DSFSTI[[i]]<<-merge(SRUC_Student_DSFS[[i]], TuitionFees_stacked[ , c("Tuition", "Programme", "Fee_Status")], by=c("Programme", "Fee_Status"))
 		## Re-orders supervision list with fee information so it's easier to read
-		SRUC_Student_DSFSTI[[i]]<<-SRUC_Student_DSFSTI[[i]][c("UUN", "Surname", "Forename", "Programme", "Matriculation", "Enrollment", "School", "Supervisor", "Organisation", "Detail", "Fee_Status", "Tuition")]
-		## Calculates portion of total fee associated with each student's supervision
-		SRUC_Student_DSFSTI[[i]][,13]<<-(0.25 * SRUC_Student_DSFSTI[[i]][,12])
+		SRUC_Student_DSFSTI[[i]]<<-SRUC_Student_DSFSTI[[i]][c("UUN", "Surname", "Forename", "Programme", "Matriculation", "Enrollment", "School", "Supervisor", "Organisation", "Detail", "Fee_Status", "Tuition", "Num_Summers_Supervision")]
+				
+		## Calculates portion of total fee associated with each student's supervision, adjusting for part time students' irregular supervision timelines
+		SRUC_Student_DSFSTI[[i]][,14] <<- ifelse((grepl("3 years", SRUC_Student_DSFSTI[[i]]$Programme, ignore.case=TRUE) & SRUC_Student_DSFSTI[[i]]$Num_Summers_Supervision==1), 
+											0.25 * (3 / 1) * SRUC_Student_DSFSTI[[i]][,12], 
+											ifelse((grepl("3 years", SRUC_Student_DSFSTI[[i]]$Programme, ignore.case=TRUE) & SRUC_Student_DSFSTI[[i]]$Num_Summers_Supervision==2), 
+											0.25 * (3 / 2 ) * SRUC_Student_DSFSTI[[i]][,12],
+											ifelse((grepl("3 years", SRUC_Student_DSFSTI[[i]]$Programme, ignore.case=TRUE) & SRUC_Student_DSFSTI[[i]]$Num_Summers_Supervision==3), 
+											0.25 * (3 / 3 ) * SRUC_Student_DSFSTI[[i]][,12],
+											ifelse((grepl("2 years", SRUC_Student_DSFSTI[[i]]$Programme, ignore.case=TRUE) & SRUC_Student_DSFSTI[[i]]$Num_Summers_Supervision==1), 
+											0.25 * (2 / 1) * SRUC_Student_DSFSTI[[i]][,12], 
+											ifelse((grepl("2 years", SRUC_Student_DSFSTI[[i]]$Programme, ignore.case=TRUE) & SRUC_Student_DSFSTI[[i]]$Num_Summers_Supervision==2), 
+											0.25 * (2 / 2 ) * SRUC_Student_DSFSTI[[i]][,12],
+											0.25 * SRUC_Student_DSFSTI[[i]][,12])))))
+				
 		## Names this column to highlight the fee portion due to each student on the programme for supervision
-		names(SRUC_Student_DSFSTI[[i]])[names(SRUC_Student_DSFSTI[[i]])=="V13"]<<-"Supervision_Fee"
+		names(SRUC_Student_DSFSTI[[i]])[names(SRUC_Student_DSFSTI[[i]])=="V14"]<<-"Supervision_Fee"
+		
+		# Calculates the different top slices for easy of comparison/reference later
+		SRUC_Student_DSFSTI[[i]]$Net_TopSlice <<- 0.80 * as.numeric(as.character(SRUC_Student_DSFSTI[[i]]$Supervision_Fee))
+		SRUC_Student_DSFSTI[[i]]$Net_GSAdmin <<- 0.85 * SRUC_Student_DSFSTI[[i]]$Net_TopSlice
+		SRUC_Student_DSFSTI[[i]]$Net_PGO <<- 0.90 * SRUC_Student_DSFSTI[[i]]$Net_GSAdmin
 		
 		## Advances to the next course and repeats above steps until the list of programmes is exhausted
 		i = i+1
@@ -465,8 +488,6 @@ SRUC_Prog_DS <- function() {
 		ProgrammeFinances_SRUCstudent_DS[j,] <<- list(Total_All, Total_sruc, Total_gs)
 		row.names(ProgrammeFinances_SRUCstudent_DS)[j] <<- Programmes[j]
 		
-		CourseDataFSTI[[i]]$Net_TopSlice <<- 0.80 * as.numeric(as.character(CourseDataFSTI[[i]]$Course_Fee))
-		
 		## Advances to the next course and repeats above steps until the list of courses is exhausted
 		j = j+1
 	}
@@ -483,9 +504,9 @@ SRUC_Prog_DS <- function() {
 	
 #To Check inputs worked		
 SRUC_Prog_DS()
-SRUC_Student_DS[1]
-SRUC_Student_DSFS[1]
-SRUC_Student_DSFSTI[1]
+SRUC_Student_DS[2]
+SRUC_Student_DSFS[2]
+SRUC_Student_DSFSTI[2]
 
 SRUC_Student_DS
 SRUC_Student_DSFS
@@ -626,7 +647,7 @@ SRUC_ExternalStudent_DS <- function() {
 		
 		RGFinances_ExtDS[j,] <<- list(Total_All, Total_gs,Total_spss, Total_law, Total_eng, Total_bus, Total_art)
 		row.names(RGFinances_ExtDS)[j] <<- Research_Groups[j]
-		
+			
 		## Advances to the next research group and repeats above steps until the list of research groups is exhausted
 		j = j+1
 	}	
