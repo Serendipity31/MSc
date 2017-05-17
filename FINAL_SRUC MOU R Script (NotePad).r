@@ -377,7 +377,7 @@ ProgrammeFinances_TC
 SRUC_Prog_DS <- function() {
 
 	i = 1
-	Lost_SRUC_DSStudent_Check <<- data.frame(Programme=character(), Pre_Merge=numeric(), Post_Merge=numeric(), Difference=numeric(), Highlights=character(), Lost_UUNs=character(), Gained_UUNs=character(), stringsAsFactors=FALSE)
+	Lost_SRUC_DSStudent_Check <<- data.frame(Programme=character(), Pre_Merge=numeric(), Post_Merge1=numeric(), Difference1=numeric(), Post_Merge2=numeric(), Difference2=numeric(),Highlights=character(), Lost_UUNs=character(), Gained_UUNs=character(), stringsAsFactors=FALSE)
 	SRUC_Student_DS <<- vector('list', length(Programmes))
 	SRUC_Student_DSFS <<- vector('list', length(Programmes))
 	SRUC_Student_DSFSTI <<- vector('list', length(Programmes))
@@ -406,28 +406,24 @@ SRUC_Prog_DS <- function() {
 			# If this happens, this should print a warning to prompt us to go back and find the missing student data and
 			# add it into the FeeStatus sheet if appropriate (i.e. unless they have already paid all their tuition AND we
 			# have already been paid for it, and it's just the delay in them actually participating in whichever course
-			Post_Merge_Length <- length(SRUC_Student_DSFS[[i]]$UUN)
-			Post_Merge_UUN <- as.vector(SRUC_Student_DSFS[[i]]$UUN)
-			Diff <- Post_Merge_Length - Pre_Merge_Length
+			Post_Merge_Length1 <- length(SRUC_Student_DSFS[[i]]$UUN)
+			Post_Merge_UUN1 <- as.vector(SRUC_Student_DSFS[[i]]$UUN)
+			Diff1 <- Post_Merge_Length1 - Pre_Merge_Length
 			
-			if (Diff <0) {
-				Highlights <- paste("Warning:", abs(Diff) , "Student(s) LOST during merge")
+			if (Diff1 <0) {
+				Highlights <- paste("Warning:", abs(Diff1) , "Student(s) LOST during merge")
 			}
-			elseif (Diff >0) {
-				Highlights <- "Warning:", abs(Diff), "Student(s) GAINED during merge")
+			else if (Diff1 >0) {
+				Highlights <- paste("Warning:", abs(Diff1), "Student(s) GAINED during merge")
 			}
-			{Highlights <- ""}
+			else {Highlights <- ""}
 			
 			# Code from: http://stackoverflow.com/questions/17598134/compare-two-lists-in-r
 			# Look for Teemu Daniel Laajala
-			Inboth <- Pre_Merge_UUN[Pre_Merge_UUN %in% Post_Merge_UUN] # in both, same as call: intersect(first, second)
-			OnlyInPreMerge <- Pre_Merge_UUN[!Pre_Merge_UUN %in% Post_Merge_UUN] # only in 'first', same as: setdiff(first, second)
-			OnlyInPostMerge <- Post_Merge_UUN[!Post_Merge_UUN %in% Pre_Merge_UUN] # only in 'second', same as: setdiff(second, first)
+			Inboth <- Pre_Merge_UUN[Pre_Merge_UUN %in% Post_Merge_UUN1] # in both, same as call: intersect(first, second)
+			OnlyInPreMerge <- Pre_Merge_UUN[!Pre_Merge_UUN %in% Post_Merge_UUN1] # only in 'first', same as: setdiff(first, second)
+			OnlyInPostMerge <- Post_Merge_UUN1[!Post_Merge_UUN1 %in% Pre_Merge_UUN] # only in 'second', same as: setdiff(second, first)
 			
-			#For reference on listing lost UUNs in final column: 
-			# http://stackoverflow.com/questions/13973116/convert-r-vector-to-string-vector-of-1-element
-			Lost_SRUC_DSStudent_Check[i,] <<- c(Programmes[i], Pre_Merge_Length, Post_Merge_Length, abs(Diff), Highlights, paste(OnlyInPreMerge, collapse=", "), paste(OnlyInPostMerge, collapse=", "))			   
-					   
 		# Rename FSG column to be "Fee_Status"
 		names(SRUC_Student_DSFS[[i]])[names(SRUC_Student_DSFS[[i]])=="FSG"] <<-"Fee_Status"
 		
@@ -460,6 +456,20 @@ SRUC_Prog_DS <- function() {
 		SRUC_Student_DSFSTI[[i]]$Net_TopSlice <<- 0.80 * as.numeric(as.character(SRUC_Student_DSFSTI[[i]]$Supervision_Fee))
 		SRUC_Student_DSFSTI[[i]]$Net_GSAdmin <<- 0.85 * SRUC_Student_DSFSTI[[i]]$Net_TopSlice
 		SRUC_Student_DSFSTI[[i]]$Net_PGO <<- 0.90 * SRUC_Student_DSFSTI[[i]]$Net_GSAdmin
+		
+		# Search for and remove dupliate rows if they have appeared for some reason
+		   #this function should look at all columns to determine uniqueness, and then remove full rows
+		   #http://stats.stackexchange.com/questions/6759/removing-duplicated-rows-data-frame-in-r
+		SRUC_Student_DSFSTI[[i]] <<- SRUC_Student_DSFSTI[[i]][!duplicated(SRUC_Student_DSFSTI[[i]]),]
+		
+		#Check to see if duplicated students removed (as was case with Julia Docherty in EPM 2016 for some reason)
+			Post_Merge_Length2 <- length(SRUC_Student_DSFSTI[[i]]$UUN)
+			Post_Merge_UUN2 <- as.vector(SRUC_Student_DSFSTI[[i]]$UUN)
+			Diff2 <- Post_Merge_Length2 - Pre_Merge_Length
+			
+			#For reference on listing lost UUNs in final column: 
+			# http://stackoverflow.com/questions/13973116/convert-r-vector-to-string-vector-of-1-element
+			Lost_SRUC_DSStudent_Check[i,] <<- c(Programmes[i], Pre_Merge_Length, Post_Merge_Length1, abs(Diff1), Post_Merge_Length2, abs(Diff2), Highlights, paste(OnlyInPreMerge, collapse=", "), paste(OnlyInPostMerge, collapse=", "))			   
 		
 		## Advances to the next course and repeats above steps until the list of programmes is exhausted
 		i = i+1
@@ -520,7 +530,7 @@ ProgrammeFinances_SRUCstudent_DS["EE",]
 
 SRUC_ExternalStudent_DS <- function() {
 	
-	Lost_nonSRUC_DSStudent_Check <<- data.frame(Pre_Merge=numeric(), Post_Merge=numeric(), Difference=numeric(), Highlights=character(), Lost_UUNs=character(), stringsAsFactors=FALSE)
+	Lost_nonSRUC_DSStudent_Check <<- data.frame(Pre_Merge=numeric(), Post_Merge1=numeric(), Difference1=numeric(), Post_Merge2=numeric(), Difference2=numeric(), Highlights=character(), Lost_UUNs=character(), stringsAsFactors=FALSE)
 	
 	## Imports xlsx for showing external student supervision details
 	fn <- paste("Inputs/Dissertations/", "SRUC_ExternalDissertations", yr, ".xlsx", sep="")
@@ -552,11 +562,11 @@ SRUC_ExternalStudent_DS <- function() {
 			# If this happens, this should print a warning to prompt us to go back and find the missing student data and
 			# add it into the FeeStatus sheet if appropriate (i.e. unless they have already paid all their tuition AND we
 			# have already been paid for it, and it's just the delay in them actually participating in whichever course
-			Post_Merge_Length <- length(SRUC_ExternalStudent_DSFS$UUN)
-			Post_Merge_UUN <- as.vector(SRUC_ExternalStudent_DSFS$UUN)
-			Diff <- Post_Merge_Length - Pre_Merge_Length
+			Post_Merge_Length1 <- length(SRUC_ExternalStudent_DSFS$UUN)
+			Post_Merge_UUN1 <- as.vector(SRUC_ExternalStudent_DSFS$UUN)
+			Diff1 <- Post_Merge_Length1 - Pre_Merge_Length
 			
-			if (Diff <0) {
+			if (Diff1 <0) {
 				Highlights <- paste("Warning:", abs(Diff) , "Student(s) LOST during merge")
 			}
 			else {
@@ -565,14 +575,11 @@ SRUC_ExternalStudent_DS <- function() {
 			
 			# Code from: http://stackoverflow.com/questions/17598134/compare-two-lists-in-r
 			# Look for Teemu Daniel Laajala
-			Inboth <- Pre_Merge_UUN[Pre_Merge_UUN %in% Post_Merge_UUN] # in both, same as call: intersect(first, second)
-			OnlyInPreMerge <- Pre_Merge_UUN[!Pre_Merge_UUN %in% Post_Merge_UUN] # only in 'first', same as: setdiff(first, second)
-			OnlyInPostMerge <- Post_Merge_UUN[!Post_Merge_UUN %in% Pre_Merge_UUN] # only in 'second', same as: setdiff(second, first)
+			Inboth <- Pre_Merge_UUN[Pre_Merge_UUN %in% Post_Merge_UUN1] # in both, same as call: intersect(first, second)
+			OnlyInPreMerge <- Pre_Merge_UUN[!Pre_Merge_UUN %in% Post_Merge_UUN1] # only in 'first', same as: setdiff(first, second)
+			OnlyInPostMerge <- Post_Merge_UUN1[!Post_Merge_UUN1 %in% Pre_Merge_UUN] # only in 'second', same as: setdiff(second, first)
 			
-			#For reference on listing lost UUNs in final column: 
-			# http://stackoverflow.com/questions/13973116/convert-r-vector-to-string-vector-of-1-element
-			Lost_nonSRUC_DSStudent_Check[1,] <<- c(Pre_Merge_Length, Post_Merge_Length, abs(Diff), Highlights, paste(OnlyInPreMerge, collapse=", "))			   
-			write.xlsx(Lost_nonSRUC_DSStudent_Check, paste("Outputs/Tests/LostStudentCheck_", yr, ".xlsx", sep=""), sheetName="ExtStudDS", append=TRUE)									
+						
 		
 	## Merges supervision list with fee information
 	SRUC_ExternalStudent_DSFSTI <<- merge(SRUC_ExternalStudent_DSFS, TuitionFees_stacked[ , c("Tuition", "Programme", "Fee_Status")], by=c("Programme", "Fee_Status"))
@@ -606,6 +613,24 @@ SRUC_ExternalStudent_DS <- function() {
 		SRUC_ExternalStudent_DSFSTI$School[grepl("School Of Law", SRUC_ExternalStudent_DSFSTI$School, ignore.case=FALSE)] <<- "Law"
 		SRUC_ExternalStudent_DSFSTI$School[grepl("Business School", SRUC_ExternalStudent_DSFSTI$School, ignore.case=FALSE)] <<- "Business"
 		SRUC_ExternalStudent_DSFSTI$School[grepl("Edinburgh College Of Art", SRUC_ExternalStudent_DSFSTI$School, ignore.case=FALSE)] <<- "Art"	
+		
+	# Search for and remove dupliate rows if they have appeared for some reason
+		   #this function should look at all columns to determine uniqueness, and then remove full rows
+		   #http://stats.stackexchange.com/questions/6759/removing-duplicated-rows-data-frame-in-r
+		SRUC_ExternalStudent_DSFSTI <<- SRUC_ExternalStudent_DSFSTI[!duplicated(SRUC_ExternalStudent_DSFSTI),]
+		
+		#Check to see if duplicated students removed (as was case with Julia Docherty in EPM 2016 for some reason)
+			Post_Merge_Length2 <- length(SRUC_ExternalStudent_DSFSTI$UUN)
+			Post_Merge_UUN2 <- as.vector(SRUC_ExternalStudent_DSFSTI$UUN)
+			Diff2 <- Post_Merge_Length2 - Pre_Merge_Length
+			
+			#For reference on listing lost UUNs in final column: 
+			# http://stackoverflow.com/questions/13973116/convert-r-vector-to-string-vector-of-1-element
+			Lost_nonSRUC_DSStudent_Check[1,] <<- c(Pre_Merge_Length, Post_Merge_Length1, abs(Diff1), Post_Merge_Length2, abs(Diff2), Highlights, paste(OnlyInPreMerge, collapse=", "))			   
+		
+			#For reference on listing lost UUNs in final column: 
+			# http://stackoverflow.com/questions/13973116/convert-r-vector-to-string-vector-of-1-element
+			 write.xlsx(Lost_nonSRUC_DSStudent_Check, paste("Outputs/Tests/LostStudentCheck_", yr, ".xlsx", sep=""), sheetName="ExtStudDS", append=TRUE)		
 
 #Step 3: Groups supervision fees associated with SRUC staff supervising non-SRUC students by Research Group
 
